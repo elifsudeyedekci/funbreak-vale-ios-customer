@@ -1,0 +1,57 @@
+# This file configures the analyzer to use the lint rule set from `package:lints`
+# This is the recommended approach for new projects.
+# To enable a different set of rules, see the documentation:
+# https://dart.dev/go/flutter-lints
+
+include: package:lints/flutter.yaml
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
+
+# Uncomment the following section to enable additional rules:
+# linter:
+#   rules:
+#     - always_declare_return_types
+#     - avoid_empty_else
+#     - avoid_print
+#     - avoid_unused_constructor_parameters
+#     - await_only_futures
+#     - camel_case_types
+#     - cancel_subscriptions
+#     - constant_identifier_names
+#     - control_flow_in_finally
+#     - directives_ordering
+#     - empty_catches
+#     - empty_constructor_bodies
+#     - empty_statements
+#     - hash_and_equals
+#     - implementation_imports
+#     - library_names
+#     - library_prefixes
+#     - non_constant_identifier_names
+#     - package_api_docs
+#     - package_names
+#     - package_prefixed_library_names
+#     - prefer_const_constructors
+#     - prefer_final_fields
+#     - prefer_is_not_empty
+#     - slash_for_doc_comments
+#     - test_types_in_equals
+#     - throw_in_finally
+#     - type_init_formals
+#     - unnecessary_brace_in_string_interps
+#     - unnecessary_getters_setters
+#     - unnecessary_new
+#     - unnecessary_null_aware_assignments
+#     - unnecessary_statements
+#     - unrelated_type_equality_checks
+#     - use_rethrow_when_possible
+#     - valid_regexps
+
+# Uncomment the following section to enable additional rules:
+# analyzer:
+#   exclude:
+#     - "**/*.g.dart"
+#     - "**/*.freezed.dart"
+#   errors:
+#     invalid_annotation_target: ignore 
