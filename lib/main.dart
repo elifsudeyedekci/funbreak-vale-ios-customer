@@ -167,14 +167,21 @@ Future<void> _initializeFirebaseMessaging() async {
       print('📱 iOS FCM Token alınmadan önce permission isteniyor...');
       final settings = await messaging.requestPermission(
         alert: true,
+        announcement: false,
         badge: true,
-        sound: true,
+        carPlay: false,
+        criticalAlert: false,
         provisional: false,
+        sound: true,
       );
       print('✅ iOS FCM Permission: ${settings.authorizationStatus}');
+      print('   Alert: ${settings.alert}');
+      print('   Badge: ${settings.badge}');
+      print('   Sound: ${settings.sound}');
       
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
         print('⚠️ iOS bildirim izni verilmedi - Token alınamaz!');
+        print('💡 Settings → Notifications → FunBreak Vale → Allow Notifications açık olmalı!');
         return;
       }
     }
