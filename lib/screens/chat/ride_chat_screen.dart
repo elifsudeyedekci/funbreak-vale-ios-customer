@@ -707,13 +707,16 @@ class _RideChatScreenState extends State<RideChatScreen> {
       String? locationName;
       
       if (locationChoice == 'current') {
-        // MEVCUT KONUM
-        final permission = await Permission.location.request();
-        if (permission != PermissionStatus.granted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('❌ Konum izni gerekli!')),
-          );
-          return;
+        // MEVCUT KONUM - İZİN KONTROLÜ
+        var permission = await Permission.location.status;
+        if (!permission.isGranted) {
+          permission = await Permission.location.request();
+          if (!permission.isGranted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('❌ Konum izni gerekli!')),
+            );
+            return;
+          }
         }
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1039,12 +1042,16 @@ class _RideChatScreenState extends State<RideChatScreen> {
 
   Future<void> _startRecording() async {
     try {
-      final permission = await Permission.microphone.request();
-      if (permission != PermissionStatus.granted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Mikrofon izni gerekli!')),
-        );
-        return;
+      // MİKROFON İZNİ KONTROLÜ - İZİN VARSA REQUEST ÇAĞIRMA!
+      var permission = await Permission.microphone.status;
+      if (!permission.isGranted) {
+        permission = await Permission.microphone.request();
+        if (!permission.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('❌ Mikrofon izni gerekli!')),
+          );
+          return;
+        }
       }
       
       final directory = await getApplicationDocumentsDirectory();

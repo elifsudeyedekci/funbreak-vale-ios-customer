@@ -38,7 +38,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Firebase'i başlat (iOS'te AppDelegate'te zaten yapıldı)
   if (Platform.isAndroid) {
-    await Firebase.initializeApp();
+  await Firebase.initializeApp();
   }
   
   print('📱 === MÜŞTERİ BACKGROUND BİLDİRİM ===');
@@ -104,9 +104,9 @@ void main() async {
   // ⚠️ Firebase initialization - Flutter plugin tüm platformlarda!
   try {
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
       print('✅ MÜŞTERİ Firebase başlatıldı (${Platform.isAndroid ? "Android" : "iOS"})');
     } else {
       print('⚠️ MÜŞTERİ Firebase zaten başlatılmış');
@@ -277,15 +277,15 @@ Future<void> requestPermissions() async {
       } else {
         print('⚠️ iOS bildirim izni reddedildi');
       }
-      
-      // Konum izni
+    
+    // Konum izni
       await Permission.locationWhenInUse.request();
       await Permission.locationAlways.request();
       
     } else if (Platform.isAndroid) {
       // Android için mevcut sistem
       await Permission.notification.request();
-      await Permission.location.request();
+    await Permission.location.request();
     }
     
     print('✅ İzinler istendi (${Platform.operatingSystem})');
