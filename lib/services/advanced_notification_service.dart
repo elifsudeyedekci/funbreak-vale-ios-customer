@@ -325,20 +325,47 @@ class AdvancedNotificationService {
     await _updateTokenOnServer(token);
   }
   
-  // LOCAL BİLDİRİM GÖSTER
+  // LOCAL BİLDİRİM GÖSTER (PLATFORM-AWARE!)
   static Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
     
-    // 🔥 HER ZAMAN BİZİM LOCAL'İ GÖSTER - HEADS-UP GARANTİLİ!
-    if (notification != null) {
-      print('✅ [MÜŞTERİ] Local notification gösteriliyor (heads-up garantisi için)');
-      // FCM de gösterebilir ama bizimki daha agresif - heads-up olur!
-      
-      // 🔥 HER BİLDİRİM TİPİ İÇİN AYRI CHANNEL - ANDROID RATE-LIMIT BYPASS!
-      final notificationType = message.data['type'] ?? message.data['notification_type'] ?? '';
-      String channelId;
-      String channelName;
-      String channelDesc;
+    if (notification == null) {
+      print('⚠️ Notification null - data-only mesaj');
+      return;
+    }
+    
+    print('✅ [MÜŞTERİ] Local notification gösteriliyor');
+    
+    // 🔥 PLATFORM-SPECIFIC NOTIFICATION
+    if (Platform.isIOS) {
+      // iOS - BASIT GÖSTER!
+      try {
+        await _localNotifications.show(
+          DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          notification.title ?? 'FunBreak Vale',
+          notification.body ?? '',
+          NotificationDetails(
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              sound: 'notification.caf',
+            ),
+          ),
+          payload: jsonEncode(message.data),
+        );
+        print('✅ iOS notification gösterildi!');
+      } catch (e) {
+        print('❌ iOS notification error: $e');
+      }
+      return;
+    }
+    
+    // ANDROID - CHANNEL SİSTEMİ
+    final notificationType = message.data['type'] ?? message.data['notification_type'] ?? '';
+    String channelId;
+    String channelName;
+    String channelDesc;
       
       if (notificationType == 'driver_found') {
         channelId = 'ride_updates_v2'; // ✅ YENİ CHANNEL!
