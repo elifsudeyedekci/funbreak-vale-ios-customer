@@ -194,9 +194,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               Tab(text: 'Aktif'),
               Tab(text: 'Geçmiş'),
             ],
+            ),
           ),
-        ),
-        body: TabBarView(
+          body: TabBarView(
           children: [
             // Aktif Tab - AKTİF YOLCULUKLAR
             _buildActiveRidesTab(themeProvider),
