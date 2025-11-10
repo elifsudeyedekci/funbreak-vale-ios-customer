@@ -58,6 +58,9 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
   // ✅ SAATLİK PAKET CACHE
   List<Map<String, double>> _cachedHourlyPackages = [];
   
+  // 🗺️ HARİTA KAMERA KONTROLÜ
+  bool _isFirstCameraUpdate = true; // İlk açılışta kamera ayarla, sonra SADECE marker güncelle
+  
   @override
   void initState() {
     super.initState();
