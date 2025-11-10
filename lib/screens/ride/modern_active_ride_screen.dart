@@ -818,75 +818,107 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                     
                     const SizedBox(height: 12),
                     
-                    // DİNAMİK FİYAT + SAATLİK PAKET BİLGİSİ
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFD700).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.attach_money, color: Color(0xFFFFD700), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Güncel Tutar: ₺${_calculateDynamicPrice()}',
-                                style: const TextStyle(
-                                  color: Color(0xFFFFD700),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Spacer(),
-                              const Icon(Icons.trending_up, color: Color(0xFFFFD700), size: 16),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // ✅ DETAYLI FİYAT HESABI GÖSTERİMİ
-                          Container(
-                            padding: const EdgeInsets.all(8),
+                    // ✅ İKİ KUTUCUK YAN YANA: TAHMİNİ FİYAT (Sabit) + GÜNCEL TUTAR (Dinamik)
+                    Row(
+                      children: [
+                        // 📦 TAHMİNİ FİYAT (SABİT - İlk fiyat, bekleme YOK!)
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey.shade700.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade500.withOpacity(0.3)),
                             ),
                             child: Column(
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
+                                    Icon(Icons.receipt_long, color: Colors.white70, size: 16),
+                                    SizedBox(width: 4),
                                     Text(
-                                      '${_getCurrentKm()} km × ₺${_getKmPrice()}',
-                                      style: const TextStyle(color: Colors.white70, fontSize: 13),
-                                    ),
-                                    Text(
-                                      '₺${((double.tryParse(_getCurrentKm()) ?? 0.0) * _getKmPrice()).toStringAsFixed(2)}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                      'Tahmini Fiyat',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                if (!_isHourlyPackage() && _getWaitingMinutes() > 15) ...[
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Bekleme (${_getWaitingMinutes() - 15} dk)',
-                                        style: TextStyle(color: Colors.orange.shade300, fontSize: 13),
-                                      ),
-                                      Text(
-                                        '₺${_calculateWaitingFee()}',
-                                        style: TextStyle(color: Colors.orange.shade300, fontSize: 13, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  '₺${_getInitialEstimatedPrice()}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                ],
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Sabit',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 9,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        
+                        // 💰 GÜNCEL TUTAR (DİNAMİK - KM + Bekleme)
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD700).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              children: [
+                                const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.trending_up, color: Color(0xFFFFD700), size: 16),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Güncel Tutar',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '₺${_calculateCurrentTotal()}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${_getCurrentKm()} km${_getWaitingMinutes() > 15 ? " + ${_getWaitingMinutes() - 15} dk" : ""}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                           // SAATLİK PAKET BADGE (2 saat sonra göster - Server saati ile)
                           if (_isHourlyPackage()) ...[
                             const SizedBox(height: 8),
@@ -2931,6 +2963,26 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     final waitingMinutes = _currentRideStatus['waiting_minutes'] ?? 
                           widget.rideDetails['waiting_minutes'] ?? 0;
     return int.tryParse(waitingMinutes.toString()) ?? 0;
+  }
+  
+  // ✅ İLK TAHMİNİ FİYAT (SABİT - İlk rotaya girdiğinde belirlenen fiyat)
+  String _getInitialEstimatedPrice() {
+    final initialPrice = double.tryParse(
+      widget.rideDetails['estimated_price']?.toString() ?? '0'
+    ) ?? 0.0;
+    return initialPrice.toStringAsFixed(0);
+  }
+  
+  // ✅ GÜNCEL TOPLAM (DİNAMİK - KM + Bekleme)
+  String _calculateCurrentTotal() {
+    final currentKm = double.tryParse(_getCurrentKm()) ?? 0.0;
+    final kmPrice = _getKmPrice();
+    final kmTotal = currentKm * kmPrice;
+    
+    final waitingFee = double.tryParse(_calculateWaitingFee()) ?? 0.0;
+    final total = kmTotal + waitingFee;
+    
+    return total.toStringAsFixed(0);
   }
   
   // ✅ KM FİYATI PANEL'DEN ÇEK
