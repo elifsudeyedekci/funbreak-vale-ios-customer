@@ -112,7 +112,7 @@ void main() async {
       print('⚠️ Firebase init hatası: $e');
     }
   } else {
-    print('📱 iOS: Firebase.configure() AppDelegate'te yapıldı');
+    print('📱 iOS: Firebase.configure() AppDelegate tarafından yapıldı');
   }
   
   // BACKGROUND MESSAGE HANDLER KAYDET - Firebase başlatıldıktan sonra!
