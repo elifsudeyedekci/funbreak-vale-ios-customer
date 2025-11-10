@@ -4405,7 +4405,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'destination_address': _destinationAddress,
         'destination_lat': _destinationLocation?.latitude ?? 0.0,
         'destination_lng': _destinationLocation?.longitude ?? 0.0,
-        'scheduled_time': _selectedDateTime?.toIso8601String() ?? DateTime.now().add(const Duration(hours: 2)).toIso8601String(),
+        'scheduled_time': _selectedDateTime?.toIso8601String() ?? (await TimeService.getServerTime()).add(const Duration(hours: 2)).toIso8601String(),
         'estimated_price': (_estimatedPrice ?? 0.0) - _discountAmount,
         'payment_method': 'card',
         'request_type': 'scheduled_later', // 2+ SAAT İLERİ!
@@ -6361,13 +6361,16 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
       // YENİ RideService ile talep oluştur - ADRES + KOORDİNAT!
+      // SERVER TIME KULLAN!
+      final correctScheduledTime = await _getCorrectScheduledTime();
+      
       final result = await RideService.createRideRequest(
         customerId: int.tryParse(authProvider.customerId ?? '1') ?? 1,
         pickupLocation: _pickupAddress,
         destination: _destinationAddress,
         serviceType: _selectedServiceType,
         requestType: _selectedTimeOption == 'Hemen' ? 'immediate_or_soon' : 'scheduled_later',
-        scheduledDateTime: _selectedDateTime?.toIso8601String(),
+        scheduledDateTime: correctScheduledTime.toIso8601String(),
         selectedDriverId: int.tryParse(selectedDriver['id']?.toString() ?? '0') ?? 0,
         estimatedPrice: _estimatedPrice,
         discountCode: _appliedDiscountCode,
