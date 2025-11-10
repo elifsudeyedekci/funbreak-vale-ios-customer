@@ -185,7 +185,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             backgroundColor: const Color(0xFFFFD700),
             foregroundColor: Colors.black,
             elevation: 0,
-            bottom: TabBar(
+          bottom: TabBar(
             indicatorColor: Colors.black,
             labelColor: Colors.black,
             unselectedLabelColor: Colors.black54,
@@ -194,9 +194,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               Tab(text: 'Aktif'),
               Tab(text: 'Geçmiş'),
             ],
-            ),
           ),
-          body: TabBarView(
+        ),
+        body: TabBarView(
           children: [
             // Aktif Tab - AKTİF YOLCULUKLAR
             _buildActiveRidesTab(themeProvider),
@@ -208,7 +208,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       ),
     );
   }
-
+  
   Widget _buildActiveRidesTab(ThemeProvider themeProvider) {
     if (_isLoadingActive) {
       return const Center(
