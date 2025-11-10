@@ -919,37 +919,35 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                         ),
                       ],
                     ),
-                          // SAATLİK PAKET BADGE (2 saat sonra göster - Server saati ile)
-                          if (_isHourlyPackage()) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Colors.purple, Colors.deepPurple],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.schedule, color: Colors.white, size: 14),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '📦 SAATLİK PAKET: ${_getHourlyPackageLabel()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                    
+                    // SAATLİK PAKET BADGE (2 saat sonra göster - Server saati ile)
+                    if (_isHourlyPackage()) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.purple, Colors.deepPurple],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.schedule, color: Colors.white, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              '📦 SAATLİK PAKET: ${_getHourlyPackageLabel()}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
