@@ -36,8 +36,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // BACKGROUND MESSAGE HANDLER - UYGULAMA KAPALI
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Firebase'i başlat
-  await Firebase.initializeApp();
+  // Firebase'i başlat (iOS'te AppDelegate'te zaten yapıldı)
+  if (Platform.isAndroid) {
+    await Firebase.initializeApp();
+  }
   
   print('📱 === MÜŞTERİ BACKGROUND BİLDİRİM ===');
   print('   📋 Title: ${message.notification?.title}');
@@ -99,13 +101,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print('✅ Firebase başlatıldı');
-  } catch (e) {
-    print('⚠️ Firebase init hatası (muhtemelen duplicate - OK): $e');
+  // ⚠️ iOS'te Firebase.configure() AppDelegate'te yapılıyor!
+  if (Platform.isAndroid) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print('✅ Firebase başlatıldı (Android)');
+    } catch (e) {
+      print('⚠️ Firebase init hatası: $e');
+    }
+  } else {
+    print('📱 iOS: Firebase.configure() AppDelegate'te yapıldı');
   }
   
   // BACKGROUND MESSAGE HANDLER KAYDET - Firebase başlatıldıktan sonra!

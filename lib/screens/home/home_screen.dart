@@ -4178,18 +4178,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           timeLog = _selectedDateTime!.toIso8601String();
           print('🕰️ Özel tarih talep: $_selectedDateTime ($timeLog)');
         } else {
-          // "1 Saat Sonra", "2 Saat Sonra" gibi otomatik seçenekler
-          if (_selectedTimeOption == '1 Saat Sonra') {
-            scheduledDateTime = DateTime.now().add(const Duration(hours: 1));
-          } else if (_selectedTimeOption == '2 Saat Sonra') {
-            scheduledDateTime = DateTime.now().add(const Duration(hours: 2));
-          } else if (_selectedTimeOption == '30 Dakika Sonra') {
-            scheduledDateTime = DateTime.now().add(const Duration(minutes: 30));
-          } else {
-            // Diğer seçeneklerde 30 dakika sonra
-            scheduledDateTime = DateTime.now().add(const Duration(minutes: 30));
-          }
-          timeLog = scheduledDateTime!.toIso8601String();
+          // ❌ PHONE TIME KULLANMA! _getCorrectScheduledTime() kullan!
+          // Bu kısım artık kullanılmayacak, _getCorrectScheduledTime() server time kullanıyor
+          print('⚠️ Otomatik seçenek - _getCorrectScheduledTime() kullanılacak');
+          // scheduledDateTime burada boş kalacak, _getCorrectScheduledTime() set edecek
+          timeLog = 'AUTO_CALCULATED';
           print('🕰️ Otomatik zaman talep: $_selectedTimeOption → $scheduledDateTime ($timeLog)');
         }
       } else {
