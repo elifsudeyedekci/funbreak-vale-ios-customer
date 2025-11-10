@@ -1445,37 +1445,49 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
       _markers = newMarkers;
     });
     
-    // Harita kamerasını her iki konumu gösterecek şekilde ayarla
-    if (_customerLocation != null && _driverLocation != null && _mapController != null) {
+    // 🗺️ Harita kamerasını SADECE İLK AÇILIŞTA ayarla, sonra kullanıcı kontrolünde!
+    if (_isFirstCameraUpdate && _customerLocation != null && _driverLocation != null && _mapController != null) {
       _fitMarkersOnMap();
+      _isFirstCameraUpdate = false; // Artık kamera hareket etmeyecek!
+      print('📷 İlk kamera pozisyonu ayarlandı - artık sadece marker güncellenecek');
     }
   }
   
-  // HARİTA KAMERASINI İKİ KONUMU DA GÖSTERECEK ŞEKİLDE AYARLA
+  // HARİTA KAMERASINI İKİ KONUMU DA GÖSTERECEK ŞEKİLDE AYARLA (SADECE İLK AÇILIŞTA!)
   void _fitMarkersOnMap() {
     if (_customerLocation == null || _driverLocation == null || _mapController == null) return;
     
-    double minLat = _customerLocation!.latitude < _driverLocation!.latitude 
-      ? _customerLocation!.latitude : _driverLocation!.latitude;
-    double maxLat = _customerLocation!.latitude > _driverLocation!.latitude 
-      ? _customerLocation!.latitude : _driverLocation!.latitude;
-    double minLng = _customerLocation!.longitude < _driverLocation!.longitude 
-      ? _customerLocation!.longitude : _driverLocation!.longitude;
-    double maxLng = _customerLocation!.longitude > _driverLocation!.longitude 
-      ? _customerLocation!.longitude : _driverLocation!.longitude;
+    // Müşteri-sürücü arası mesafe hesapla
+    final distance = _calculateDriverDistance();
     
-    // Padding ekle
-    double padding = 0.01; // ~1km
+    // Mesafeye göre zoom level belirle (daha iyi görünüm)
+    double zoomLevel;
+    if (distance < 1) {
+      zoomLevel = 15.0; // Çok yakın (0-1 km)
+    } else if (distance < 5) {
+      zoomLevel = 13.0; // Yakın (1-5 km)
+    } else if (distance < 10) {
+      zoomLevel = 12.0; // Orta (5-10 km)
+    } else {
+      zoomLevel = 11.0; // Uzak (10+ km)
+    }
+    
+    // İki nokta arasındaki orta noktaya zoom yap
+    double centerLat = (_customerLocation!.latitude + _driverLocation!.latitude) / 2;
+    double centerLng = (_customerLocation!.longitude + _driverLocation!.longitude) / 2;
     
     _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(minLat - padding, minLng - padding),
-          northeast: LatLng(maxLat + padding, maxLng + padding),
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(centerLat, centerLng),
+          zoom: zoomLevel,
+          tilt: 0,
+          bearing: 0,
         ),
-        100.0, // Padding
       ),
     );
+    
+    print('📷 Harita kamerası ayarlandı: zoom=$zoomLevel, distance=${distance.toStringAsFixed(1)}km');
   }
   
   // ŞOFÖR MESAFESİ HESAPLA
