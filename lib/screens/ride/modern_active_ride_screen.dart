@@ -831,17 +831,61 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                         children: [
                           Row(
                             children: [
+                              const Icon(Icons.attach_money, color: Color(0xFFFFD700), size: 20),
+                              const SizedBox(width: 8),
                               Text(
-                                'Tahmini Tutar: ₺${_calculateDynamicPrice()}',
+                                'Güncel Tutar: ₺${_calculateDynamicPrice()}',
                                 style: const TextStyle(
                                   color: Color(0xFFFFD700),
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const Spacer(),
                               const Icon(Icons.trending_up, color: Color(0xFFFFD700), size: 16),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          // ✅ DETAYLI FİYAT HESABI GÖSTERİMİ
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '${_getCurrentKm()} km × ₺8',
+                                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                    ),
+                                    Text(
+                                      '₺${(double.tryParse(_getCurrentKm()) ?? 0.0) * 8.0}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                if (!_isHourlyPackage() && _getWaitingMinutes() > 15) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Bekleme (${_getWaitingMinutes() - 15} dk)',
+                                        style: const TextStyle(color: Colors.orange.shade300, fontSize: 13),
+                                      ),
+                                      Text(
+                                        '₺${_calculateWaitingFee()}',
+                                        style: TextStyle(color: Colors.orange.shade300, fontSize: 13, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                           // SAATLİK PAKET BADGE (2 saat sonra göster - Server saati ile)
                           if (_isHourlyPackage()) ...[
@@ -2880,6 +2924,24 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
       _lastLoggedWaitingTime = currentWaiting;
     }
     return waitingTime;
+  }
+  
+  // ✅ BEKLEME DAKİKASI INT OLARAK DÖNDÜR
+  int _getWaitingMinutes() {
+    final waitingMinutes = _currentRideStatus['waiting_minutes'] ?? 
+                          widget.rideDetails['waiting_minutes'] ?? 0;
+    return int.tryParse(waitingMinutes.toString()) ?? 0;
+  }
+  
+  // ✅ BEKLEME ÜCRETİ HESAPLA (İlk 15dk ücretsiz, sonra her 15dk ₺200)
+  String _calculateWaitingFee() {
+    final waiting = _getWaitingMinutes();
+    if (waiting <= 15) return '0';
+    
+    final chargeableMinutes = waiting - 15;
+    final intervals = (chargeableMinutes / 15).ceil();
+    final fee = intervals * 200;
+    return fee.toString();
   }
   
   // SAATLİK PAKETTE SÜRE, NORMAL VALEDE BEKLEME
