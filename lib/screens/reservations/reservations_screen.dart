@@ -205,9 +205,10 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           ],
         ),
       ),
+      ),
     );
   }
-  
+
   Widget _buildActiveRidesTab(ThemeProvider themeProvider) {
     if (_isLoadingActive) {
       return const Center(
