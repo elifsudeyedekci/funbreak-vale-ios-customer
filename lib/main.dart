@@ -162,15 +162,41 @@ Future<void> _initializeFirebaseMessaging() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   
   try {
+    // ⚠️ iOS'TA ÖNCE PERMİSSİON AL!
+    if (Platform.isIOS) {
+      print('📱 iOS FCM Token alınmadan önce permission isteniyor...');
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      print('✅ iOS FCM Permission: ${settings.authorizationStatus}');
+      
+      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+        print('⚠️ iOS bildirim izni verilmedi - Token alınamaz!');
+        return;
+      }
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? prefs.getString('admin_user_id');
     
     if (userId != null && userId.isNotEmpty) {
-      final fcmToken = await messaging.getToken();
+      // iOS'ta token alma 10 saniye sürebilir
+      final fcmToken = await messaging.getToken().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⏱️ iOS FCM Token timeout - tekrar denenecek');
+          return null;
+        },
+      );
       
       if (fcmToken != null && fcmToken.isNotEmpty) {
         print('📱 [MÜŞTERİ] FCM Token alındı: ${fcmToken.substring(0, 20)}...');
         await _saveCustomerFCMToken(fcmToken);
+      } else {
+        print('⚠️ FCM Token boş geldi - APNs izni kontrol et');
       }
     } else {
       print('⚠️ [MÜŞTERİ] User ID yok - FCM token kaydedilmedi (login sonrası yapılacak)');
