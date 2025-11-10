@@ -338,25 +338,36 @@ class AdvancedNotificationService {
     
     // 🔥 PLATFORM-SPECIFIC NOTIFICATION
     if (Platform.isIOS) {
-      // iOS - BASIT GÖSTER!
+      // iOS - DETAYLI GÖSTER!
       try {
+        final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+        print('📱 iOS bildirim gösteriliyor - ID: $notificationId');
+        print('   Title: ${notification.title}');
+        print('   Body: ${notification.body}');
+        
         await _localNotifications.show(
-          DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          notificationId,
           notification.title ?? 'FunBreak Vale',
           notification.body ?? '',
           NotificationDetails(
             iOS: DarwinNotificationDetails(
-              presentAlert: true,
+              presentAlert: true,  // iOS 13 ve altı için
+              presentBanner: true, // iOS 14+ için - EKRAN ÜSTÜNDE BANNER!
+              presentList: true,   // Notification Center'da göster
               presentBadge: true,
               presentSound: true,
               sound: 'notification.caf',
+              badgeNumber: 1,
+              subtitle: message.data['type'] ?? '',
+              threadIdentifier: 'funbreak_vale',
             ),
           ),
           payload: jsonEncode(message.data),
         );
-        print('✅ iOS notification gösterildi!');
+        print('✅ iOS notification show() çağrıldı - Banner + List + Sound + Badge');
       } catch (e) {
         print('❌ iOS notification error: $e');
+        print('❌ Stack: ${e.toString()}');
       }
       return;
     }
