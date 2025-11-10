@@ -282,7 +282,7 @@ Future<void> requestPermissions() async {
       await Permission.locationWhenInUse.request();
       await Permission.locationAlways.request();
       
-    } else {
+    } else if (Platform.isAndroid) {
       // Android için mevcut sistem
       await Permission.notification.request();
       await Permission.location.request();

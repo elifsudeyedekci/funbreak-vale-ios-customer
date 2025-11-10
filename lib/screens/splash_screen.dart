@@ -53,10 +53,18 @@ class _SplashScreenState extends State<SplashScreen> {
   
   Future<void> _requestPermissionsAndInitializeServices() async {
     try {
-      // Bildirim izni kontrol et
-      var notificationStatus = await Permission.notification.status;
-      if (notificationStatus.isDenied) {
-        await _requestPermissionWithDialog('Bildirim', Permission.notification);
+      // Bildirim izni kontrol et (Platform-aware!)
+      if (Platform.isAndroid) {
+        var notificationStatus = await Permission.notification.status;
+        if (notificationStatus.isDenied) {
+          await _requestPermissionWithDialog('Bildirim', Permission.notification);
+        }
+      } else if (Platform.isIOS) {
+        // iOS'ta Firebase Messaging ile kontrol
+        final fcmSettings = await FirebaseMessaging.instance.getNotificationSettings();
+        if (fcmSettings.authorizationStatus != AuthorizationStatus.authorized) {
+          await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
+        }
       }
       
       // Konum izni kontrol et
