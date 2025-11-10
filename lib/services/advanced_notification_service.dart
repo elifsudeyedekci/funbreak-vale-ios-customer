@@ -469,7 +469,6 @@ class AdvancedNotificationService {
       print('   Başlık: ${notification.title}');
       print('   Type: $notificationType');
       print('   Ses: ✅ Titreşim: ✅ LED: ✅ Importance: MAX');
-    }
   }
   
   // BİLDİRİM AKSİYON HANDLER

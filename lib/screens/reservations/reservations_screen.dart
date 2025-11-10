@@ -185,7 +185,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             backgroundColor: const Color(0xFFFFD700),
             foregroundColor: Colors.black,
             elevation: 0,
-          bottom: TabBar(
+            bottom: TabBar(
             indicatorColor: Colors.black,
             labelColor: Colors.black,
             unselectedLabelColor: Colors.black54,

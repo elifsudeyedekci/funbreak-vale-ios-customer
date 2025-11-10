@@ -875,7 +875,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                                     children: [
                                       Text(
                                         'Bekleme (${_getWaitingMinutes() - 15} dk)',
-                                        style: const TextStyle(color: Colors.orange.shade300, fontSize: 13),
+                                        style: TextStyle(color: Colors.orange.shade300, fontSize: 13),
                                       ),
                                       Text(
                                         '₺${_calculateWaitingFee()}',
