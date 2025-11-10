@@ -859,11 +859,11 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      '${_getCurrentKm()} km × ₺8',
+                                      '${_getCurrentKm()} km × ₺${_getKmPrice()}',
                                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                                     ),
                                     Text(
-                                      '₺${(double.tryParse(_getCurrentKm()) ?? 0.0) * 8.0}',
+                                      '₺${((double.tryParse(_getCurrentKm()) ?? 0.0) * _getKmPrice()).toStringAsFixed(2)}',
                                       style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                                     ),
                                   ],
@@ -2933,15 +2933,36 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     return int.tryParse(waitingMinutes.toString()) ?? 0;
   }
   
-  // ✅ BEKLEME ÜCRETİ HESAPLA (İlk 15dk ücretsiz, sonra her 15dk ₺200)
+  // ✅ KM FİYATI PANEL'DEN ÇEK
+  double _getKmPrice() {
+    final kmPrice = _currentRideStatus['km_price'] ?? 
+                    widget.rideDetails['km_price'] ?? 8.0;
+    return double.tryParse(kmPrice.toString()) ?? 8.0;
+  }
+  
+  // ✅ BEKLEME ÜCRETİ HESAPLA (İlk 15dk ücretsiz, sonra panel'den waiting_fee_per_interval)
   String _calculateWaitingFee() {
     final waiting = _getWaitingMinutes();
-    if (waiting <= 15) return '0';
     
-    final chargeableMinutes = waiting - 15;
-    final intervals = (chargeableMinutes / 15).ceil();
-    final fee = intervals * 200;
-    return fee.toString();
+    // Panel'den ayarları çek
+    final freeMinutes = _currentRideStatus['waiting_free_minutes'] ?? 
+                        widget.rideDetails['waiting_free_minutes'] ?? 15;
+    final freeMinutesInt = int.tryParse(freeMinutes.toString()) ?? 15;
+    
+    if (waiting <= freeMinutesInt) return '0';
+    
+    final feePerInterval = _currentRideStatus['waiting_fee_per_interval'] ?? 
+                           widget.rideDetails['waiting_fee_per_interval'] ?? 200.0;
+    final feePerIntervalDouble = double.tryParse(feePerInterval.toString()) ?? 200.0;
+    
+    final intervalMinutes = _currentRideStatus['waiting_interval_minutes'] ?? 
+                            widget.rideDetails['waiting_interval_minutes'] ?? 15;
+    final intervalMinutesInt = int.tryParse(intervalMinutes.toString()) ?? 15;
+    
+    final chargeableMinutes = waiting - freeMinutesInt;
+    final intervals = (chargeableMinutes / intervalMinutesInt).ceil();
+    final fee = intervals * feePerIntervalDouble;
+    return fee.toInt().toString();
   }
   
   // SAATLİK PAKETTE SÜRE, NORMAL VALEDE BEKLEME
