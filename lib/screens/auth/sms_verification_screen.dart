@@ -349,6 +349,31 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     }
   }
 
+  // ⚠️ PASTE DETECTION - CLIPBOARD'DAN KOPYALA-YAPIŞTIR!
+  void _handlePastedCode(String pastedText, int startIndex) {
+    // 6 haneli rakam kontrolü
+    final digitsOnly = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    if (digitsOnly.length >= 6) {
+      // 6 haneli kodu tüm kutucuklara dağıt
+      for (int i = 0; i < 6 && i < digitsOnly.length; i++) {
+        _codeControllers[i].text = digitsOnly[i];
+      }
+      
+      // Son kutucuğa focus ver ve otomatik doğrula
+      _focusNodes[5].requestFocus();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _verifyCode();
+      });
+    } else if (digitsOnly.isNotEmpty) {
+      // Kısa kod gelirse normal davran
+      _codeControllers[startIndex].text = digitsOnly[0];
+      if (startIndex < 5) {
+        _focusNodes[startIndex + 1].requestFocus();
+      }
+    }
+  }
+
   Widget _buildCodeInput(int index) {
     return SizedBox(
       width: 50,
@@ -378,6 +403,13 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
           ),
         ),
         onChanged: (value) {
+          // ⚠️ PASTE DETECTION - 6 haneli kod yapıştırıldıysa hepsine dağıt!
+          if (value.length > 1) {
+            _handlePastedCode(value, index);
+            return;
+          }
+          
+          // Normal tek karakter girişi
           if (value.isNotEmpty && index < 5) {
             _focusNodes[index + 1].requestFocus();
           } else if (value.isEmpty && index > 0) {
