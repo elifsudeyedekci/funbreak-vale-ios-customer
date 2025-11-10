@@ -101,18 +101,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // ⚠️ iOS'te Firebase.configure() AppDelegate'te yapılıyor!
-  if (Platform.isAndroid) {
-    try {
+  // ⚠️ Firebase initialization - HER PLATFORMDA Flutter plugin halleder!
+  try {
+    if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print('✅ Firebase başlatıldı (Android)');
-    } catch (e) {
-      print('⚠️ Firebase init hatası: $e');
+      print('✅ Firebase başlatıldı (${Platform.isAndroid ? "Android" : "iOS"})');
+    } else {
+      print('⚠️ Firebase zaten başlatılmış');
     }
-  } else {
-    print('📱 iOS: Firebase.configure() AppDelegate tarafından yapıldı');
+  } catch (e) {
+    print('⚠️ Firebase init hatası (normal, çalışmaya devam): $e');
   }
   
   // BACKGROUND MESSAGE HANDLER KAYDET - Firebase başlatıldıktan sonra!
