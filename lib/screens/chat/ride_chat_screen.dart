@@ -213,9 +213,10 @@ class _RideChatScreenState extends State<RideChatScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _messageController,
+                    style: TextStyle(color: Colors.black, fontSize: 16), // SİYAH YAZI
                     decoration: InputDecoration(
-                      hintText: 'Türkçe karakter test: ş ğ ü ı ö ç',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'Mesaj yazın',
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
