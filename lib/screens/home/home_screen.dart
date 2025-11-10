@@ -4186,9 +4186,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           print('🕰️ Otomatik zaman talep: $_selectedTimeOption → $scheduledDateTime ($timeLog)');
         }
       } else {
-        scheduledDateTime = DateTime.now();
+        // HEMEN için de SERVER TIME kullan!
+        scheduledDateTime = await TimeService.getServerTime();
         timeLog = 'Hemen talep';
-        print('⚡ Hemen talep: $scheduledDateTime');
+        print('⚡ Hemen talep (SERVER TIME): $scheduledDateTime');
       }
       
       // MERKEZİ FONKSİYON İLE DOĞRULAMA - SERVER TIME!
