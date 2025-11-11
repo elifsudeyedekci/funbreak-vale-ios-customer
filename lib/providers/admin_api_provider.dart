@@ -720,8 +720,8 @@ class AdminApiProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          // ISO format parse et - TR timezone
-          final serverTimeStr = data['server_time']['iso'];
+          // Backend'den gelen format: "2025-11-11 22:54:29" veya ISO8601
+          final serverTimeStr = data['iso8601'] ?? data['server_time'];
           debugPrint('✅ Server saati alındı: $serverTimeStr');
           return DateTime.parse(serverTimeStr);
         }

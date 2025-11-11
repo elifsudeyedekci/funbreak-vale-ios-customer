@@ -2346,7 +2346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'pickup_lng': _pickupLocation!.longitude,
           'destination_lat': _pickupLocation!.latitude, // SAATLİK PAKET - AYNI KONUM  
           'destination_lng': _pickupLocation!.longitude, // SAATLİK PAKET - AYNI KONUM
-          'scheduled_time': (await _getCorrectScheduledTime()).toIso8601String(),
+          'scheduled_time': (await _getCorrectScheduledTime())?.toIso8601String() ?? '',
           'estimated_price': (_selectedHourlyPackage!.price) - _discountAmount,
           'payment_method': _selectedPaymentMethod,
           'request_type': 'immediate_or_soon',
@@ -4195,10 +4195,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // MERKEZİ FONKSİYON İLE DOĞRULAMA - SERVER TIME!
       final centralTime = await _getCorrectScheduledTime();
       print('⏰ Final scheduled_time: ${scheduledDateTime?.toIso8601String() ?? 'NULL'}');
-      print('⏰ Central validation (SERVER): ${centralTime.toIso8601String()}');
+      print('⏰ Central validation (SERVER): ${centralTime?.toIso8601String() ?? 'NULL - HEMEN'}');
       print('📝 _selectedTimeOption: $_selectedTimeOption');
       
-      // Central fonksiyonu kullan - SERVER BAZLI!
+      // Central fonksiyonu kullan - SERVER BAZLI! (NULL ise "Hemen" demek)
       scheduledDateTime = centralTime;
       
       // YENİ RideService ile talep oluştur - AKILLI SİSTEM!
@@ -4208,7 +4208,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         destination: _destinationAddress,
         serviceType: _selectedServiceType,
         requestType: _selectedTimeOption == 'Hemen' ? 'immediate_or_soon' : 'scheduled_later',
-        scheduledDateTime: scheduledDateTime.toIso8601String(),
+        scheduledDateTime: scheduledDateTime?.toIso8601String() ?? '', // NULL ise boş string
         selectedDriverId: 0, // Akıllı sistem - otomatik seçim
         estimatedPrice: _estimatedPrice,
         discountCode: _appliedDiscountCode,
@@ -6371,7 +6371,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
         destination: _destinationAddress,
         serviceType: _selectedServiceType,
         requestType: _selectedTimeOption == 'Hemen' ? 'immediate_or_soon' : 'scheduled_later',
-        scheduledDateTime: correctScheduledTime.toIso8601String(),
+        scheduledDateTime: correctScheduledTime?.toIso8601String() ?? '', // NULL ise boş string
         selectedDriverId: int.tryParse(selectedDriver['id']?.toString() ?? '0') ?? 0,
         estimatedPrice: _estimatedPrice,
         discountCode: _appliedDiscountCode,
@@ -6930,20 +6930,22 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
 
   // MERKEZI SCHEDULED TIME HESAPLAMA - HER İKİ SERVİS İÇİN!
   // 🚀 SERVER TIME KULLAN - PHONE TIMEZONE BYPASS!
-  Future<DateTime> _getCorrectScheduledTime() async {
+  Future<DateTime?> _getCorrectScheduledTime() async {
     print('🕰️ SCHEDULED TIME HESAPLAMA (SERVER TIME):');
     print('   📝 _selectedTimeOption: $_selectedTimeOption');
     print('   📅 _selectedDateTime: $_selectedDateTime');
+    
+    // "Hemen" için NULL döndür (backend'e scheduled_time gönderme!)
+    if (_selectedTimeOption == 'Hemen' || 
+        _selectedTimeOption.contains('Tahmini')) {
+      print('   ✅ Hemen seçildi - scheduled_time NULL olacak (immediate request)');
+      return null;
+    }
     
     // SERVER SAATİNİ AL - PHONE TIMEZONE BAĞIMSIZ!
     final adminApi = AdminApiProvider();
     final serverNow = await adminApi.getServerTime();
     print('   🌐 Server saati: $serverNow');
-    
-    if (_selectedTimeOption == 'Hemen') {
-      print('   ⚡ Hemen seçildi: $serverNow');
-      return serverNow;
-    }
     
     // Özel tarih seçilmişse onu kullan - AMA SADECE GERÇEK ÖZEL TARİH İÇİN!
     if (_selectedDateTime != null && _selectedTimeOption.startsWith('Özel')) {
