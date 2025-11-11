@@ -2973,12 +2973,13 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   
   // ✅ GÜNCEL TOPLAM (DİNAMİK - KM + Bekleme)
   String _calculateCurrentTotal() {
-    final currentKm = double.tryParse(_getCurrentKm()) ?? 0.0;
-    final kmPrice = _getKmPrice();
-    final kmTotal = currentKm * kmPrice;
+    // ✅ Backend'den gelen estimated_price kullan (backend zaten distance_pricing SABİT fiyatı hesaplıyor!)
+    final backendPrice = _currentRideStatus['estimated_price'] ?? 
+                         widget.rideDetails['estimated_price'] ?? 0.0;
+    final basePrice = double.tryParse(backendPrice.toString()) ?? 0.0;
     
     final waitingFee = double.tryParse(_calculateWaitingFee()) ?? 0.0;
-    final total = kmTotal + waitingFee;
+    final total = basePrice + waitingFee;
     
     return total.toStringAsFixed(0);
   }
