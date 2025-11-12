@@ -201,7 +201,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
     // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!
     final finalPrice = widget.rideStatus['final_price'];
-    final backendEstimatedPrice = _currentRideStatus['estimated_price'] ?? 
+    final backendEstimatedPrice = widget.rideStatus['estimated_price'] ?? 
                                    widget.rideDetails['estimated_price'] ?? 
                                    estimatedPrice;
     
