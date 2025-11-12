@@ -198,23 +198,26 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       }
     }
     
-    // ✅ BEKLEME ÜCRETİNİ HESAPLA!
-    _waitingFee = 0.0;
-    if (!isHourlyPackage && _waitingMinutes > _waitingFreeMinutes) {
-      final chargeableMinutes = _waitingMinutes - _waitingFreeMinutes;
-      final intervals = (chargeableMinutes / _waitingIntervalMinutes).ceil();
-      _waitingFee = intervals * _waitingFeePerInterval;
-      print('💳 MÜŞTERİ ÖDEME: Bekleme ücreti - $_waitingMinutes dk (ücretsiz: $_waitingFreeMinutes dk) → $intervals aralık × ₺$_waitingFeePerInterval = ₺${_waitingFee.toStringAsFixed(2)}');
-    } else if (isHourlyPackage) {
-      _waitingFee = 0.0;
-      print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Bekleme ücreti İPTAL!');
+    // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
+    // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!
+    final finalPrice = widget.rideStatus['final_price'];
+    final backendEstimatedPrice = _currentRideStatus['estimated_price'] ?? 
+                                   widget.rideDetails['estimated_price'] ?? 
+                                   estimatedPrice;
+    
+    // final_price varsa onu kullan (tamamlanmış yolculuk)
+    if (finalPrice != null && finalPrice > 0) {
+      _totalPrice = double.tryParse(finalPrice.toString()) ?? 0.0;
+      _basePrice = _totalPrice; // Tam tutar
+      _waitingFee = 0.0; // Backend'de zaten hesaplanmış
+      print('💳 ÖDEME: final_price kullanılıyor (completed): ₺${_totalPrice.toStringAsFixed(2)}');
+    } else {
+      // Backend'den gelen estimated_price kullan
+      _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
+      _basePrice = _totalPrice; // Backend zaten toplam hesaplamış
+      _waitingFee = 0.0; // Backend'de zaten dahil
+      print('💳 ÖDEME: Backend estimated_price (bekleme dahil): ₺${_totalPrice.toStringAsFixed(2)}');
     }
-    
-    // ✅ BASE = estimated - waiting, TOTAL = estimated (bekleme zaten dahil!)
-    _basePrice = estimatedPrice - _waitingFee;
-    _totalPrice = estimatedPrice;
-    
-    print('💳 MÜŞTERİ ÖDEME: Base: ₺${_basePrice.toStringAsFixed(2)}, Bekleme: ₺${_waitingFee.toStringAsFixed(2)}, Mesafe: ${_distance.toStringAsFixed(1)}km, TOPLAM: ₺${_totalPrice.toStringAsFixed(2)}');
     
     // setState ile UI güncelle
     setState(() {});

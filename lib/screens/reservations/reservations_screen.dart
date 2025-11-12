@@ -53,7 +53,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             'include_completed': true,
             'include_details': true,
           }),
-        );
+        ).timeout(const Duration(seconds: 5)); // ✅ 5 saniye timeout!
         
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -99,7 +99,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           body: jsonEncode({
             'customer_id': customerId,
           }),
-        );
+        ).timeout(const Duration(seconds: 5)); // ✅ 5 saniye timeout!
         
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -166,25 +166,16 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return WillPopScope(
-      onWillPop: () async {
-        // Ana sayfaya dön (splash ekran yerine!)
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-        return false;
-      },
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          backgroundColor: themeProvider.isDarkMode ? Colors.black : const Color(0xFFF8F9FA),
-          appBar: AppBar(
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false),
-            ),
-            title: const Text('Rezervasyonlar'),
-            backgroundColor: const Color(0xFFFFD700),
-            foregroundColor: Colors.black,
-            elevation: 0,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: themeProvider.isDarkMode ? Colors.black : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          automaticallyImplyLeading: false, // ✅ GERİ BUTONU KALDIRILDI!
+          title: const Text('Rezervasyonlar'),
+          backgroundColor: const Color(0xFFFFD700),
+          foregroundColor: Colors.black,
+          elevation: 0,
           bottom: TabBar(
             indicatorColor: Colors.black,
             labelColor: Colors.black,
@@ -204,7 +195,6 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             _buildPastRidesTab(themeProvider),
           ],
         ),
-      ),
       ),
     );
   }
@@ -1037,8 +1027,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     const SizedBox(width: 8),
                   
                   // ÖDEME DURUMU VEYA BORÇ ÖDE BUTONU
-                  if (ride['payment_status'] == 'pending' || 
-                      ride['payment_status'] == 'waiting_confirmation') ...[
+                  // ✅ Completed ama ödenmemiş yolculuklar için borç öde butonu göster!
+                  if ((ride['payment_status'] == 'pending' || 
+                      ride['payment_status'] == 'waiting_confirmation' ||
+                      ride['payment_status'] == null ||
+                      ride['payment_status'] == '') && 
+                      ride['status'] == 'completed') ...[
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton.icon(

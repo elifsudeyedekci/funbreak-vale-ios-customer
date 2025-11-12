@@ -229,19 +229,54 @@ class AdvancedNotificationService {
     print('✅ [MÜŞTERİ] ${channels.length} bildirim kanalı OLUŞTURULDU (IMPORTANCE MAX!)');
   }
   
-  // İZİN İSTEME
+  // İZİN İSTEME VE TOKEN ALMA - iOS KRİTİK!
   static Future<void> _requestPermissions() async {
-    final settings = await _messaging!.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-    
-    print('🔔 Bildirim izni durumu: ${settings.authorizationStatus}');
+    try {
+      // ✅ ÖNCE İZİN İSTE (iOS için zorunlu)
+      final settings = await _messaging!.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+      
+      print('🔔 Bildirim izni durumu: ${settings.authorizationStatus}');
+      
+      // iOS için authorizationStatus kontrol
+      if (Platform.isIOS) {
+        if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+            settings.authorizationStatus != AuthorizationStatus.provisional) {
+          print('❌ iOS bildirim izni verilmedi: ${settings.authorizationStatus}');
+          return;
+        }
+      }
+      
+      // ✅ TOKEN AL (10 saniye timeout ile!)
+      try {
+        final token = await _messaging!.getToken().timeout(
+          Duration(seconds: 10),
+          onTimeout: () {
+            print('⏱️ FCM token alma timeout!');
+            return null;
+          },
+        );
+        
+        if (token != null) {
+          print('✅ FCM Token alındı: ${token.substring(0, 30)}...');
+          await _updateTokenOnServer(token);
+        } else {
+          print('⚠️ FCM token null döndü');
+        }
+      } catch (e) {
+        print('❌ FCM token alma hatası: $e');
+      }
+      
+    } catch (e) {
+      print('❌ İzin isteme hatası: $e');
+    }
   }
   
   // TOPIC SUBSCRIBE
@@ -413,7 +448,9 @@ class AdvancedNotificationService {
         // iOS için DarwinNotificationDetails
         details = NotificationDetails(
           iOS: DarwinNotificationDetails(
-            presentAlert: true,
+            presentAlert: true,  // iOS 13 ve altı
+            presentBanner: true, // ✅ iOS 14+ EKRAN BANNER!
+            presentList: true,   // ✅ Notification Center'da göster
             presentBadge: true,
             presentSound: true,
             sound: 'notification.caf',  // ⚠️ iOS .caf formatı!

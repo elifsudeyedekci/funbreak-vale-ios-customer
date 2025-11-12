@@ -2963,23 +2963,24 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     return int.tryParse(waitingMinutes.toString()) ?? 0;
   }
   
-  // ✅ İLK TAHMİNİ FİYAT (SABİT - İlk rotaya girdiğinde belirlenen fiyat)
+  // ✅ İLK TAHMİNİ FİYAT (SABİT - İlk rotaya girdiğinde belirlenen fiyat, BEKLEME YOK!)
   String _getInitialEstimatedPrice() {
+    // Backend'den gelen initial_estimated_price kullan (bekleme olmadan!)
     final initialPrice = double.tryParse(
+      _currentRideStatus['initial_estimated_price']?.toString() ?? 
+      widget.rideDetails['initial_estimated_price']?.toString() ?? 
       widget.rideDetails['estimated_price']?.toString() ?? '0'
     ) ?? 0.0;
     return initialPrice.toStringAsFixed(0);
   }
   
-  // ✅ GÜNCEL TOPLAM (DİNAMİK - KM + Bekleme)
+  // ✅ GÜNCEL TOPLAM (DİNAMİK - Backend'den direkt çek, ZATEN BEKLEME DAHİL!)
   String _calculateCurrentTotal() {
-    // ✅ Backend'den gelen estimated_price kullan (backend zaten distance_pricing SABİT fiyatı hesaplıyor!)
+    // ✅ Backend'den gelen estimated_price kullan (backend zaten bekleme + distance_pricing hesaplıyor!)
+    // ⚠️ BEKLEME TEKRAR EKLEME - Backend'den gelen fiyat zaten bekleme dahil!
     final backendPrice = _currentRideStatus['estimated_price'] ?? 
                          widget.rideDetails['estimated_price'] ?? 0.0;
-    final basePrice = double.tryParse(backendPrice.toString()) ?? 0.0;
-    
-    final waitingFee = double.tryParse(_calculateWaitingFee()) ?? 0.0;
-    final total = basePrice + waitingFee;
+    final total = double.tryParse(backendPrice.toString()) ?? 0.0;
     
     return total.toStringAsFixed(0);
   }
