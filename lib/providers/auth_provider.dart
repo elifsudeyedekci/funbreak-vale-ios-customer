@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'admin_api_provider.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -194,6 +197,9 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         debugPrint('✅ REGISTER: Customer ID set edildi: $_customerId');
         
+        // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET!
+        _updateFCMToken();
+        
         _setLoading(false);
         return true;
       } else {
@@ -231,6 +237,9 @@ class AuthProvider with ChangeNotifier {
         _customerName = 'Test Müşteri';
         _customerPhone = '05555555555';
         _customerId = '1';
+        
+        // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET!
+        _updateFCMToken();
         
         _setLoading(false);
         return true;
@@ -271,6 +280,9 @@ class AuthProvider with ChangeNotifier {
           debugPrint('Firebase giriş hatası: $firebaseError');
           // Admin panel girişi başarılı olduğu için devam et
         }
+        
+        // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET!
+        _updateFCMToken();
         
         _setLoading(false);
         return true;
@@ -407,5 +419,56 @@ class AuthProvider with ChangeNotifier {
     _pendingPaymentAmount = 0.0;
     notifyListeners();
     print('✅ Bekleyen ödeme temizlendi');
+  }
+  
+  // ✅ FCM TOKEN GÜNCELLEME - LOGIN/REGISTER SONRASI OTOMATIK ÇAĞRILIR!
+  Future<void> _updateFCMToken() async {
+    try {
+      debugPrint('🔔 FCM Token güncelleme başlatılıyor...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('admin_user_id') ?? prefs.getString('user_id');
+      
+      if (userId == null || userId.isEmpty) {
+        debugPrint('⚠️ User ID bulunamadı, token güncellenemedi');
+        return;
+      }
+      
+      // FCM Token al
+      final messaging = FirebaseMessaging.instance;
+      final fcmToken = await messaging.getToken().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('⏱️ FCM Token timeout');
+          return null;
+        },
+      );
+      
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('⚠️ FCM Token alınamadı');
+        return;
+      }
+      
+      debugPrint('✅ FCM Token alındı: ${fcmToken.substring(0, 20)}...');
+      
+      // Backend'e gönder
+      final response = await http.post(
+        Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'user_type': 'customer',
+          'fcm_token': fcmToken,
+        }),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        debugPrint('✅ FCM Token backend\'e kaydedildi!');
+      } else {
+        debugPrint('⚠️ FCM Token backend kayıt hatası: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ FCM Token güncelleme hatası: $e');
+    }
   }
 }

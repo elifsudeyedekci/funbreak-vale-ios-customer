@@ -213,10 +213,9 @@ class _RideChatScreenState extends State<RideChatScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _messageController,
-                    style: TextStyle(color: Colors.black, fontSize: 16), // SİYAH YAZI
                     decoration: InputDecoration(
-                      hintText: 'Mesaj yazın',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      hintText: 'Türkçe karakter test: ş ğ ü ı ö ç',
+                      hintStyle: TextStyle(color: Colors.grey[600]),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
@@ -707,16 +706,19 @@ class _RideChatScreenState extends State<RideChatScreen> {
       String? locationName;
       
       if (locationChoice == 'current') {
-        // MEVCUT KONUM - İZİN KONTROLÜ
-        var permission = await Permission.location.status;
+        // MEVCUT KONUM - DİREK İZİN İSTE!
+        final permission = await Permission.location.request();
         if (!permission.isGranted) {
-          permission = await Permission.location.request();
-          if (!permission.isGranted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('❌ Konum izni gerekli!')),
-            );
-            return;
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('❌ Konum izni gerekli!'),
+              action: SnackBarAction(
+                label: 'Ayarlar',
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+          return;
         }
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1042,16 +1044,19 @@ class _RideChatScreenState extends State<RideChatScreen> {
 
   Future<void> _startRecording() async {
     try {
-      // MİKROFON İZNİ KONTROLÜ - İZİN VARSA REQUEST ÇAĞIRMA!
-      var permission = await Permission.microphone.status;
+      // MİKROFON İZNİ - DİREK İSTE!
+      final permission = await Permission.microphone.request();
       if (!permission.isGranted) {
-        permission = await Permission.microphone.request();
-        if (!permission.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('❌ Mikrofon izni gerekli!')),
-          );
-          return;
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('❌ Mikrofon izni gerekli!'),
+            action: SnackBarAction(
+              label: 'Ayarlar',
+              onPressed: () => openAppSettings(),
+            ),
+          ),
+        );
+        return;
       }
       
       final directory = await getApplicationDocumentsDirectory();
