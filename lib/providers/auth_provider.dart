@@ -197,8 +197,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         debugPrint('✅ REGISTER: Customer ID set edildi: $_customerId');
         
-        // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET!
-        _updateFCMToken();
+        // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
+        await _updateFCMToken();
         
         _setLoading(false);
         return true;
@@ -238,8 +238,8 @@ class AuthProvider with ChangeNotifier {
         _customerPhone = '05555555555';
         _customerId = '1';
         
-        // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET!
-        _updateFCMToken();
+        // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
+        await _updateFCMToken();
         
         _setLoading(false);
         return true;
@@ -281,8 +281,8 @@ class AuthProvider with ChangeNotifier {
           // Admin panel girişi başarılı olduğu için devam et
         }
         
-        // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET!
-        _updateFCMToken();
+        // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
+        await _updateFCMToken();
         
         _setLoading(false);
         return true;
@@ -434,8 +434,24 @@ class AuthProvider with ChangeNotifier {
         return;
       }
       
-      // FCM Token al
+      // FCM Token al (iOS için önce izin!)
       final messaging = FirebaseMessaging.instance;
+      
+      // ✅ iOS için bildirim izni iste!
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
+      debugPrint('🔔 iOS bildirim izni: ${settings.authorizationStatus}');
+      
+      if (settings.authorizationStatus != AuthorizationStatus.authorized && 
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        debugPrint('❌ iOS bildirim izni reddedildi!');
+        return;
+      }
+      
       final fcmToken = await messaging.getToken().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
@@ -445,7 +461,7 @@ class AuthProvider with ChangeNotifier {
       );
       
       if (fcmToken == null || fcmToken.isEmpty) {
-        debugPrint('⚠️ FCM Token alınamadı');
+        debugPrint('⚠️ FCM Token alınamadı - APNs kontrol et!');
         return;
       }
       
