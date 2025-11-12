@@ -965,7 +965,9 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${_getCurrentKm()} km${_getWaitingMinutes() > 0 ? " + ${_getWaitingMinutes()} dk (₺${_calculateWaitingFee()})" : ""}',
+                        _isHourlyPackage() 
+                          ? 'Saatlik paket' 
+                          : '${_getCurrentKm()} km${_getWaitingMinutes() > 0 ? " + ${_getWaitingMinutes()} dk (₺${_calculateWaitingFee()})" : ""}',
                         style: const TextStyle(
                           color: Color(0xFFFFD700),
                           fontSize: 9,
