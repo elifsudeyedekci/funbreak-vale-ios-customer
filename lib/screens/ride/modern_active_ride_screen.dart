@@ -735,6 +735,10 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   _buildStatusCard(),
                   const SizedBox(height: 16),
                   
+                  // ✅ FİYAT KARTLARI - HER ZAMAN GÖSTER!
+                  _buildPriceCards(),
+                  const SizedBox(height: 16),
+                  
                   // Şoför Bilgileri
                   _buildDriverInfoCard(),
                   const SizedBox(height: 16),
@@ -822,181 +826,188 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               ),
             ),
             
-            // YOLCULUK BAŞLADIYSA AYRINTILI BİLGİLER GÖSTER!
-            if (status == 'in_progress') ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: Column(
-                  children: [
-                    // KM ve BEKLEME BİLGİLERİ
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildRideMetric(
-                            icon: Icons.straighten,
-                            label: 'Gidilen KM',
-                            value: '${_getCurrentKm()} km',
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildRideMetric(
-                            icon: Icons.access_time,
-                            label: _isHourlyPackage() ? 'Süre' : 'Bekleme',
-                            value: _getWaitingOrDurationDisplay(),
-                            color: Colors.orange,
-                            subtitle: _isHourlyPackage() ? null : _getWaitingFeeSubtitle(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // ✅ İKİ KUTUCUK YAN YANA: TAHMİNİ FİYAT (Sabit) + GÜNCEL TUTAR (Dinamik)
-                    Row(
-                      children: [
-                        // 📦 TAHMİNİ FİYAT (SABİT - İlk fiyat, bekleme YOK!)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade700.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey.shade500.withOpacity(0.3)),
-                            ),
-                            child: Column(
-                              children: [
-                                const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.receipt_long, color: Colors.white70, size: 16),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Tahmini Fiyat',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '₺${_getInitialEstimatedPrice()}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'Sabit',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        
-                        // 💰 GÜNCEL TUTAR (DİNAMİK - KM + Bekleme)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFD700).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
-                            ),
-                            child: Column(
-                              children: [
-                                const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.trending_up, color: Color(0xFFFFD700), size: 16),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Güncel Tutar',
-                                      style: TextStyle(
-                                        color: Color(0xFFFFD700),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '₺${_calculateCurrentTotal()}',
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFD700),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${_getCurrentKm()} km${_getWaitingMinutes() > 0 ? " + ${_getWaitingMinutes()} dk (₺${_calculateWaitingFee()})" : ""}',
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFD700),
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    // SAATLİK PAKET BADGE (2 saat sonra göster - Server saati ile)
-                    if (_isHourlyPackage()) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.purple, Colors.deepPurple],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.schedule, color: Colors.white, size: 14),
-                            const SizedBox(width: 6),
-                            Text(
-                              '📦 SAATLİK PAKET: ${_getHourlyPackageLabel()}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
           ],
         );
       },
+    );
+  }
+  
+  // ✅ FİYAT KARTLARI - BAĞIMSIZ WIDGET (HER ZAMAN GÖSTER!)
+  Widget _buildPriceCards() {
+    final status = _currentRideStatus['status'] ?? widget.rideDetails['status'] ?? 'accepted';
+    
+    // Sadece yolculuk başladıktan sonra göster
+    if (status != 'in_progress' && status != 'ride_started') {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          // KM ve BEKLEME BİLGİLERİ
+          Row(
+            children: [
+              Expanded(
+                child: _buildRideMetric(
+                  icon: Icons.straighten,
+                  label: 'Gidilen KM',
+                  value: '${_getCurrentKm()} km',
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildRideMetric(
+                  icon: Icons.access_time,
+                  label: _isHourlyPackage() ? 'Süre' : 'Bekleme',
+                  value: _getWaitingOrDurationDisplay(),
+                  color: Colors.orange,
+                  subtitle: _isHourlyPackage() ? null : _getWaitingFeeSubtitle(),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // ✅ İKİ KUTUCUK YAN YANA: TAHMİNİ FİYAT (Sabit) + GÜNCEL TUTAR (Dinamik)
+          Row(
+            children: [
+              // 📦 TAHMİNİ FİYAT (SABİT - İlk fiyat, bekleme YOK!)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade700.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade500.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long, color: Colors.white70, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Tahmini Fiyat',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '₺${_getInitialEstimatedPrice()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Sabit',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // 💰 GÜNCEL TUTAR (DİNAMİK - KM + Bekleme)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.trending_up, color: Color(0xFFFFD700), size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Güncel Tutar',
+                            style: TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '₺${_calculateCurrentTotal()}',
+                        style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_getCurrentKm()} km${_getWaitingMinutes() > 0 ? " + ${_getWaitingMinutes()} dk (₺${_calculateWaitingFee()})" : ""}',
+                        style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // SAATLİK PAKET BADGE
+          if (_isHourlyPackage()) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.purple, Colors.deepPurple],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule, color: Colors.white, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    '📦 SAATLİK PAKET: ${_getHourlyPackageLabel()}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
   
