@@ -10,9 +10,11 @@ import '../../providers/admin_api_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../models/ride.dart';
+import '../ride/ride_payment_screen.dart';
 
 class ReservationsScreen extends StatefulWidget {
-  const ReservationsScreen({Key? key}) : super(key: key);
+  final int initialTabIndex;
+  const ReservationsScreen({Key? key, this.initialTabIndex = 0}) : super(key: key);
   
   @override
   State<ReservationsScreen> createState() => _ReservationsScreenState();
@@ -165,9 +167,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final int initialIndex = widget.initialTabIndex < 0
+        ? 0
+        : (widget.initialTabIndex > 1 ? 1 : widget.initialTabIndex);
     
     return DefaultTabController(
       length: 2,
+      initialIndex: initialIndex,
       child: Scaffold(
         backgroundColor: themeProvider.isDarkMode ? Colors.black : const Color(0xFFF8F9FA),
         appBar: AppBar(
@@ -1027,52 +1033,105 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     const SizedBox(width: 8),
                   
                   // ÖDEME DURUMU VEYA BORÇ ÖDE BUTONU
-                  // ✅ Completed ama ödenmemiş yolculuklar için borç öde butonu göster!
-                  if ((ride['payment_status'] == 'pending' || 
-                      ride['payment_status'] == 'waiting_confirmation' ||
-                      ride['payment_status'] == null ||
-                      ride['payment_status'] == '') && 
-                      ride['status'] == 'completed') ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _navigateToPaymentScreen(ride),
-                        icon: const Icon(Icons.payment, size: 18),
-                        label: const Text('Borç Öde'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    ),
-                  ] else if (ride['payment_status'] == 'paid') ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle, color: Colors.green, size: 18),
-                            SizedBox(width: 4),
-                            Text(
-                              'Ödendi',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
+                  Builder(
+                    builder: (context) {
+                      final paymentStatus = (ride['payment_status'] ?? '').toString().toLowerCase();
+                      final rideStatus = (ride['status'] ?? '').toString().toLowerCase();
+                      final pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
+                      final unpaidStatuses = {
+                        '',
+                        'pending',
+                        'pending_payment',
+                        'waiting_confirmation',
+                        'waiting_payment',
+                        'unpaid',
+                        'not_paid',
+                        'failed'
+                      };
+                      final paidStatuses = {
+                        'paid',
+                        'payment_completed',
+                        'paid_manual',
+                        'paid_auto',
+                        'settled'
+                      };
+                      final hasDebt = unpaidStatuses.contains(paymentStatus) || pendingAmount > 0.0;
+                      final isRideFinished = ['completed', 'cancelled'].contains(rideStatus);
+                      final isPaid = paidStatuses.contains(paymentStatus);
+
+                      // ✅ ÖNCE PAİD KONTROLÜ - PAID İSE BORÇ ÖDE GÖSTERME!
+                      if (isPaid) {
+                        return Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Ödendi',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (hasDebt && isRideFinished) {
+                        final buttonLabel = pendingAmount > 0
+                            ? 'Borç Öde (₺${pendingAmount.toStringAsFixed(2)})'
+                            : 'Borç Öde';
+
+                        return Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _navigateToPaymentScreen(ride),
+                            icon: const Icon(Icons.payment, size: 18),
+                            label: Text(buttonLabel),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.info_outline, color: Colors.grey, size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                paymentStatus.isNotEmpty ? paymentStatus.toUpperCase() : 'ÖDEME DURUMU YOK',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -1259,22 +1318,61 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   
   // ÖDEME EKRANINA YÖNLENDİR
   Future<void> _navigateToPaymentScreen(Map<String, dynamic> ride) async {
-    // Ödeme ekranına git
-    final result = await Navigator.pushNamed(
+    final double estimatedPrice = (ride['estimated_price'] as num?)?.toDouble() ?? 0.0;
+    final double finalPrice = (ride['final_price'] as num?)?.toDouble() ?? 0.0;
+    final double pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
+    final double totalDistance = (ride['total_distance'] as num?)?.toDouble() ?? 0.0;
+    final int waitingMinutes = int.tryParse(ride['waiting_minutes']?.toString() ?? '0') ?? 0;
+
+    final rideDetails = {
+      'ride_id': ride['id'],
+      'customer_id': ride['customer_id'],
+      'driver_id': ride['driver_id'],
+      'driver_name': ride['driver_name'] ?? 'Vale',
+      'driver_phone': ride['driver_phone'] ?? '',
+      'pickup_address': ride['pickup_address'] ?? '',
+      'destination_address': ride['destination_address'] ?? '',
+      'pickup_lat': ride['pickup_lat'],
+      'pickup_lng': ride['pickup_lng'],
+      'destination_lat': ride['destination_lat'],
+      'destination_lng': ride['destination_lng'],
+      'estimated_price': finalPrice > 0 ? finalPrice : estimatedPrice,
+      'initial_estimated_price': ride['initial_estimated_price'] ?? estimatedPrice,
+      'base_price_only': ride['initial_estimated_price'] ?? estimatedPrice,
+      'final_price': finalPrice,
+      'payment_status': ride['payment_status'],
+      'payment_method': ride['payment_method'],
+      'pending_payment_amount': pendingAmount,
+      'service_type': ride['service_type'] ?? 'vale',
+      'created_at': ride['created_at'],
+      'completed_at': ride['completed_at'],
+      'waiting_minutes': waitingMinutes,
+      'total_distance': totalDistance,
+      'discount_code': ride['discount_code'],
+      'discount_amount': ride['discount_amount'],
+    };
+
+    final rideStatus = {
+      'ride_id': ride['id'],
+      'status': ride['status'],
+      'estimated_price': finalPrice > 0 ? finalPrice : estimatedPrice,
+      'waiting_minutes': waitingMinutes,
+      'current_km': totalDistance,
+      'service_type': ride['service_type'] ?? 'vale',
+      'completed_at': ride['completed_at'],
+      'payment_status': ride['payment_status'],
+    };
+
+    final result = await Navigator.push<bool>(
       context,
-      '/ride_payment',
-      arguments: {
-        'ride_id': ride['id'],
-        'estimated_price': ride['estimated_price'] ?? ride['price'] ?? 0.0,
-        'waiting_minutes': ride['waiting_time_minutes'] ?? ride['waiting_minutes'] ?? 0,
-        'distance': ride['total_distance'] ?? 0.0,
-        'driver_name': ride['driver_name'] ?? 'Vale',
-        'driver_phone': ride['driver_phone'] ?? '',
-        'from_past_rides': true, // Borç ödeme modu
-      },
+      MaterialPageRoute(
+        builder: (_) => RidePaymentScreen(
+          rideDetails: Map<String, dynamic>.from(rideDetails),
+          rideStatus: Map<String, dynamic>.from(rideStatus),
+        ),
+      ),
     );
-    
-    // Ödeme başarılıysa listeyi yenile
+
     if (result == true) {
       await _loadPastRides();
       if (mounted) {
@@ -1443,6 +1541,34 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       'Durum: ${_getStatusText(ride['status']?.toString() ?? 'completed')}',
                     ],
                   ),
+                  
+                  if ((ride['status'] ?? '').toString().toLowerCase() == 'cancelled')
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline, color: Colors.red),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '45 dakika veya daha öncesinde rezervasyon iptallerinde 1500₺ iptal ücreti yansımaktadır.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),

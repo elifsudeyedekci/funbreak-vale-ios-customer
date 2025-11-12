@@ -261,8 +261,8 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
         pickupAddress: widget.rideDetails['pickup_address']?.toString() ?? '',
         destinationAddress: widget.rideDetails['destination_address']?.toString() ?? '',
         estimatedPrice: estimatedPrice,
-        driverName: widget.rideDetails['driver_name']?.toString() ?? 'Şoför',
-        driverPhone: widget.rideDetails['driver_phone']?.toString() ?? '',
+        driverName: _driverName(),
+        driverPhone: _driverPhone(),
         driverId: widget.rideDetails['driver_id']?.toString() ?? '0',
       );
       
@@ -367,6 +367,42 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     }
     
     super.dispose();
+  }
+
+  String _driverName() {
+    final dynamic fromStatus = _currentRideStatus['driver_name'];
+    final dynamic fromDetails = widget.rideDetails['driver_name'];
+    final name = (fromStatus ?? fromDetails)?.toString().trim();
+    if (name == null || name.isEmpty) {
+      return 'Şoförünüz';
+    }
+    return name;
+  }
+
+  String _driverPhone() {
+    final dynamic fromStatus = _currentRideStatus['driver_phone'];
+    final dynamic fromDetails = widget.rideDetails['driver_phone'];
+    final phone = (fromStatus ?? fromDetails)?.toString().trim();
+    if (phone == null || phone.isEmpty) {
+      return '';
+    }
+    return phone;
+  }
+
+  String _driverAvatarInitial() {
+    final name = _driverName();
+    if (name.isEmpty) return 'Ş';
+    return name.characters.first.toUpperCase();
+  }
+
+  String? _driverPhotoUrl() {
+    final dynamic fromStatus = _currentRideStatus['driver_photo_url'] ?? _currentRideStatus['driver_photo'];
+    final dynamic fromDetails = widget.rideDetails['driver_photo_url'] ?? widget.rideDetails['driver_photo'];
+    final url = (fromStatus ?? fromDetails)?.toString().trim();
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+    return url;
   }
 
   @override
@@ -719,6 +755,11 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     final status = _currentRideStatus['status'] ?? widget.rideDetails['status'] ?? 'accepted';
     final statusInfo = _getStatusInfo(status);
     
+    // ✅ 'accepted', 'in_progress' durumlarında kartı gizle
+    if (status == 'accepted' || status == 'in_progress' || status == 'ride_started') {
+      return const SizedBox.shrink();
+    }
+    
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
@@ -811,6 +852,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                             label: _isHourlyPackage() ? 'Süre' : 'Bekleme',
                             value: _getWaitingOrDurationDisplay(),
                             color: Colors.orange,
+                            subtitle: _isHourlyPackage() ? null : _getWaitingFeeSubtitle(),
                           ),
                         ),
                       ],
@@ -907,7 +949,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${_getCurrentKm()} km${_getWaitingMinutes() > 15 ? " + ${_getWaitingMinutes() - 15} dk" : ""}',
+                                  '${_getCurrentKm()} km${_getWaitingMinutes() > 0 ? " + ${_getWaitingMinutes()} dk (₺${_calculateWaitingFee()})" : ""}',
                                   style: const TextStyle(
                                     color: Color(0xFFFFD700),
                                     fontSize: 9,
@@ -988,20 +1030,19 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                 child: CircleAvatar(
                   radius: 30,
                   backgroundColor: const Color(0xFFFFD700),
-                  // Şoför fotoğrafı varsa göster, yoksa ilk harf
-                  backgroundImage: _currentRideStatus['driver_photo_url'] != null 
-                    ? NetworkImage(_currentRideStatus['driver_photo_url'])
-                    : null,
-                  child: _currentRideStatus['driver_photo_url'] == null
-                    ? Text(
-                        (_currentRideStatus['driver_name'] ?? 'S')[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                      )
-                    : null,
+                  backgroundImage: _driverPhotoUrl() != null
+                      ? NetworkImage(_driverPhotoUrl()!)
+                      : null,
+                  child: _driverPhotoUrl() == null
+                      ? Text(
+                          _driverAvatarInitial(),
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
                 ),
               );
             },
@@ -1012,7 +1053,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _currentRideStatus['driver_name'] ?? 'Şoför Bilgisi Yükleniyor...',
+                  _driverName(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -1380,6 +1421,11 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               widget.rideDetails['waiting_minutes'] = activeRide['waiting_minutes'] ?? widget.rideDetails['waiting_minutes'];
               widget.rideDetails['current_km'] = activeRide['current_km'] ?? widget.rideDetails['current_km'];
               widget.rideDetails['started_at'] = activeRide['started_at'] ?? widget.rideDetails['started_at'];
+              widget.rideDetails['driver_name'] = activeRide['driver_name'] ?? widget.rideDetails['driver_name'];
+              widget.rideDetails['driver_phone'] = activeRide['driver_phone'] ?? widget.rideDetails['driver_phone'];
+              widget.rideDetails['driver_photo'] = activeRide['driver_photo'] ?? widget.rideDetails['driver_photo'];
+              widget.rideDetails['driver_vehicle'] = activeRide['driver_vehicle'] ?? widget.rideDetails['driver_vehicle'];
+              widget.rideDetails['driver_plate'] = activeRide['driver_plate'] ?? widget.rideDetails['driver_plate'];
               
               // BEKLEME SÜRESİ GÜNCELLEME LOGU
               final waitingMinutes = activeRide['waiting_minutes'] ?? 0;
@@ -1511,7 +1557,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
           position: _driverLocation!,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           infoWindow: InfoWindow(
-            title: '🚗 ${widget.rideDetails['driver_name'] ?? 'Şoförünüz'}',
+            title: '🚗 ${_driverName()}',
             snippet: 'Şoför konumu - ${_calculateDriverDistance().toStringAsFixed(1)} km uzakta',
           ),
         ),
@@ -1602,7 +1648,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     print('💬 Gerçek mesaj sistemi açılıyor...');
     
     final rideId = widget.rideDetails['ride_id']?.toString() ?? '0';
-    final driverName = _currentRideStatus['driver_name'] ?? 'Şoförünüz';
+    final driverName = _driverName();
     
     try {
     Navigator.push(
@@ -1698,9 +1744,9 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
             
             // Şoför arama
             _buildCallOption(
-              title: '🚗 ${widget.rideDetails['driver_name'] ?? 'Şoförünüz'}',
+              title: '🚗 ${_driverName()}',
               subtitle: 'Direkt şoförle iletişim',
-              phone: widget.rideDetails['driver_phone'] ?? '',
+              phone: _driverPhone(),
               gradient: [Colors.green, Colors.teal],
             ),
             
@@ -1970,8 +2016,8 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   // ŞİRKET KÖPRÜ ARAMA SİSTEMİ! ✅
   // ✅ NETGSM KÖPRÜ ARAMA SİSTEMİ! 🔥
   Future<void> _callDriverDirectly() async {
-    final driverName = _currentRideStatus['driver_name'] ?? 'Şoförünüz';
-    final driverPhone = _currentRideStatus['driver_phone'] ?? widget.rideDetails['driver_phone'] ?? '';
+    final driverName = _driverName();
+    final driverPhone = _driverPhone();
     
     // ✅ rideId int'e parse et!
     final rideIdRaw = widget.rideDetails['ride_id'] ?? _currentRideStatus['ride_id'] ?? 0;
@@ -2197,12 +2243,12 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   }
   
   void _makeDirectDriverCall() {
-    final driverPhone = widget.rideDetails['driver_phone'] ?? '';
+    final driverPhone = _driverPhone();
     print('📞 [MÜŞTERİ] Direkt şoför araması: $driverPhone');
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('📞 Şoförünüz ${widget.rideDetails['driver_name']} aranıyor...'),
+        content: Text('📞 Şoförünüz ${_driverName()} aranıyor...'),
         backgroundColor: Colors.blue,
         behavior: SnackBarBehavior.floating,
       ),
@@ -2840,7 +2886,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
             ),
             const SizedBox(height: 16),
             Text(
-              'Şoför: ${widget.rideDetails['driver_name'] ?? 'Bilgi yükleniyor...'}',
+              'Şoför: ${_driverName()}',
               style: const TextStyle(color: Colors.white70),
             ),
             const Text(
@@ -3015,6 +3061,18 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     final intervals = (chargeableMinutes / intervalMinutesInt).ceil();
     final fee = intervals * feePerIntervalDouble;
     return fee.toInt().toString();
+  }
+
+  String _getWaitingFeeSubtitle() {
+    final freeMinutes = _currentRideStatus['waiting_free_minutes'] ??
+        widget.rideDetails['waiting_free_minutes'] ?? 15;
+    final freeMinutesInt = int.tryParse(freeMinutes.toString()) ?? 15;
+    final feeStr = _calculateWaitingFee();
+    final feeValue = double.tryParse(feeStr) ?? 0.0;
+    if (feeValue <= 0) {
+      return 'Ücretsiz (İlk $freeMinutesInt dk)';
+    }
+    return 'Ücret: ₺${feeValue.toStringAsFixed(0)} (İlk $freeMinutesInt dk ücretsiz)';
   }
   
   // SAATLİK PAKETTE SÜRE, NORMAL VALEDE BEKLEME
@@ -3284,6 +3342,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     required String label,
     required String value,
     required Color color,
+    String? subtitle,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -3311,6 +3370,17 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               fontSize: 12,
             ),
           ),
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Colors.white60,
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );

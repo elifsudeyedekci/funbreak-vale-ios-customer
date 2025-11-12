@@ -116,6 +116,7 @@ class AdvancedNotificationService {
       
       // Firebase Messaging setup (HER İKİ PLATFORM)
       _messaging = FirebaseMessaging.instance;
+      await _messaging!.setAutoInitEnabled(true);
       
       // Permission iste
       await _requestPermissions();
@@ -251,6 +252,18 @@ class AdvancedNotificationService {
             settings.authorizationStatus != AuthorizationStatus.provisional) {
           print('❌ iOS bildirim izni verilmedi: ${settings.authorizationStatus}');
           return;
+        }
+
+        await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        final apnsToken = await _messaging!.getAPNSToken();
+        if (apnsToken != null) {
+          print('📱 APNs token alındı: ${apnsToken.substring(0, apnsToken.length > 12 ? 12 : apnsToken.length)}...');
+        } else {
+          print('⚠️ APNs token alınamadı (null döndü)');
         }
       }
       

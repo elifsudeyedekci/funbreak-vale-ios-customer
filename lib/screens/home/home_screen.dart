@@ -23,6 +23,7 @@ import '../../services/dynamic_contact_service.dart';
 import '../profile/profile_screen.dart';
 import '../legal/terms_screen.dart';
 import '../ride/modern_active_ride_screen.dart'; // MODERNİ AKTİF YOLCULUK EKRANI!
+import '../reservations/reservations_screen.dart';
 import '../../services/pricing_service.dart';
 import '../../services/location_service.dart';
 import '../../services/location_search_service.dart';
@@ -4326,8 +4327,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               onPressed: () {
                 Navigator.of(context).pop();
                 // Rezervasyonlarım sayfasına yönlendir
-                Future.delayed(Duration(milliseconds: 100), () {
-                  Navigator.pushNamed(context, '/reservations');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ReservationsScreen(),
+                    ),
+                  );
                 });
               },
               child: Text('Rezervasyonlarım', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
@@ -5751,8 +5757,13 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
   void _openPaymentScreen() {
     print('💳 Ödeme sayfasına yönlendiriliyor...');
     
-    // Burada rezervasyonlar sayfasına veya özel ödeme sayfasına yönlendirebilirsiniz
-    Navigator.pushNamed(context, '/reservations');
+    // Borç ödemeleri için geçmiş sekmesine yönlendir
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ReservationsScreen(initialTabIndex: 1),
+      ),
+    );
   }
 
   // EKSİK METODLAR - BUILD HATA DÜZELTMESİ!
@@ -6847,10 +6858,11 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
+              // Geçmiş rezervasyonlara yönlendir
               Navigator.pushNamed(context, '/reservations');
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFD700)),
-            child: const Text('Ödemelerimi Gör'),
+            child: const Text('Borça Git'),
           ),
         ],
       ),
@@ -7188,7 +7200,12 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/reservations');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ReservationsScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFD700)),
               child: const Text('Rezervasyon'),
