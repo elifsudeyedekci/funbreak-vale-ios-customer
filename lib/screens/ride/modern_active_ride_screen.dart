@@ -1101,7 +1101,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Text(
-                        'VERİFİED',
+                        'ONAYLI',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,

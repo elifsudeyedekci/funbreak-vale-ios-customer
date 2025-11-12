@@ -635,9 +635,13 @@ class _RideChatScreenState extends State<RideChatScreen> {
           print('❌ Upload hatası: $uploadError');
         }
         
-        // API'ye gönder - upload edilen URL veya local path
-        await _sendMessageToAPI(uploadedImageUrl ?? image.path, 'image');
-        print('📸 Fotograf API gonderildi');
+        // API'ye gönder - SADECE UPLOAD BAŞARILI İSE!
+        if (uploadedImageUrl != null && uploadedImageUrl.isNotEmpty) {
+          await _sendMessageToAPI(uploadedImageUrl, 'image');
+          print('📸 MÜŞTERİ Fotoğraf API gönderildi: $uploadedImageUrl');
+        } else {
+          print('❌ MÜŞTERİ Upload başarısız - API\'ye gönderilmedi!');
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
