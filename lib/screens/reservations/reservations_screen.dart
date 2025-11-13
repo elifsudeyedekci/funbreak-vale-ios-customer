@@ -1087,7 +1087,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         );
                       }
 
-                      if (hasDebt && isRideFinished) {
+                      if (hasDebt && isRideFinished && !isPaid) {
                         final buttonLabel = pendingAmount > 0
                             ? 'Borç Öde (₺${pendingAmount.toStringAsFixed(2)})'
                             : 'Borç Öde';
