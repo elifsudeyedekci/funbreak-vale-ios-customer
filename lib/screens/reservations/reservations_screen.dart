@@ -1318,10 +1318,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   
   // ÖDEME EKRANINA YÖNLENDİR
   Future<void> _navigateToPaymentScreen(Map<String, dynamic> ride) async {
-    final double estimatedPrice = (ride['estimated_price'] as num?)?.toDouble() ?? 0.0;
-    final double finalPrice = (ride['final_price'] as num?)?.toDouble() ?? 0.0;
-    final double pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
-    final double totalDistance = (ride['total_distance'] as num?)?.toDouble() ?? 0.0;
+    // ✅ SAFE PARSE - Backend String veya num gönderebilir!
+    final double estimatedPrice = double.tryParse(ride['estimated_price']?.toString() ?? '0') ?? 0.0;
+    final double finalPrice = double.tryParse(ride['final_price']?.toString() ?? '0') ?? 0.0;
+    final double pendingAmount = double.tryParse(ride['pending_payment_amount']?.toString() ?? '0') ?? 0.0;
+    final double totalDistance = double.tryParse(ride['total_distance']?.toString() ?? '0') ?? 0.0;
     final int waitingMinutes = int.tryParse(ride['waiting_minutes']?.toString() ?? '0') ?? 0;
 
     final rideDetails = {

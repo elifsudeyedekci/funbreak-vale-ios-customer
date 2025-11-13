@@ -61,12 +61,18 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     
     // ÖNCELİKLE ride status'tan verileri al
     _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
-    _distance = (widget.rideStatus['current_km'] as num?)?.toDouble() ?? 0.0;
+    // ✅ MESAFE - Backend'den total_distance, current_km veya total_distance_km gelebilir
+    _distance = double.tryParse(
+      widget.rideStatus['total_distance']?.toString() ??
+      widget.rideStatus['current_km']?.toString() ??
+      widget.rideStatus['total_distance_km']?.toString() ??
+      widget.rideDetails['total_distance']?.toString() ?? '0'
+    ) ?? 0.0;
     
     // BASE PRICE (bekleme hariç!) - Backend'den base_price_only gelecek
     final basePriceOnly = widget.rideDetails['base_price_only'] ?? widget.rideDetails['estimated_price'];
     if (basePriceOnly != null) {
-      _basePrice = (basePriceOnly as num).toDouble();
+      _basePrice = double.tryParse(basePriceOnly.toString()) ?? 0.0; // ✅ SAFE PARSE
     }
     
     _initializeAnimation();
@@ -165,8 +171,17 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     // ✅ NORMAL YOLCULUK - estimated_price (bekleme dahil olabilir), waiting hesapla, base = estimated - waiting
     final estimatedPrice = double.tryParse(widget.rideDetails['estimated_price']?.toString() ?? '0') ?? 0.0;
     _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
-    _distance = double.tryParse(widget.rideStatus['total_distance']?.toString() ?? '0') ?? 
-                (estimatedPrice / 200 * 10); // Tahmini km
+    
+    // ✅ MESAFE HESAPLAMA - Backend'den total_distance gelir (current_km veya total_distance_km da olabilir)
+    _distance = double.tryParse(
+      widget.rideStatus['total_distance']?.toString() ??
+      widget.rideStatus['current_km']?.toString() ??
+      widget.rideStatus['total_distance_km']?.toString() ??
+      widget.rideDetails['total_distance']?.toString() ??
+      widget.rideDetails['current_km']?.toString() ?? '0'
+    ) ?? 0.0;
+    
+    print('📏 MÜŞTERİ ÖDEME: Toplam mesafe = ${_distance.toStringAsFixed(2)} km');
     
     // SAATLİK PAKET KONTROLÜ - GECELİKTE BEKLEME YOK!
     final serviceType = widget.rideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
