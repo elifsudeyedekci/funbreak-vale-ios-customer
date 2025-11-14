@@ -93,12 +93,18 @@ class AuthProvider with ChangeNotifier {
         _customerId = prefs.getString('admin_user_id');
         _isAuthenticated = true;
         
-        print('Session yüklendi - Name: $_customerName, Email: $_userEmail');
+        print('✅✅✅ Session yüklendi - Name: $_customerName, Email: $_userEmail');
         
-        // ✅ AUTO-LOGIN SONRASI DA FCM TOKEN KAYDET!
-        print('🔔 AUTO-LOGIN (CUSTOMER): FCM Token kaydediliyor...');
-        await _updateFCMToken();
-        print('✅ AUTO-LOGIN (CUSTOMER): FCM Token işlemi tamamlandı');
+        // ✅ AUTO-LOGIN SONRASI FCM - ASYNC OLARAK (BLOKLAMASIN!)
+        print('🔔 AUTO-LOGIN (CUSTOMER): FCM Token arka planda kaydedilecek...');
+        Future.delayed(const Duration(seconds: 1), () async {
+          try {
+            await _updateFCMToken();
+            print('✅ AUTO-LOGIN (CUSTOMER): FCM Token başarıyla kaydedildi');
+          } catch (fcmError) {
+            print('❌ AUTO-LOGIN (CUSTOMER): FCM hatası: $fcmError');
+          }
+        });
         
         notifyListeners();
       }
