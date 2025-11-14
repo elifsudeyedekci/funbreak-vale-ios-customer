@@ -94,6 +94,12 @@ class AuthProvider with ChangeNotifier {
         _isAuthenticated = true;
         
         print('Session yüklendi - Name: $_customerName, Email: $_userEmail');
+        
+        // ✅ AUTO-LOGIN SONRASI DA FCM TOKEN KAYDET!
+        print('🔔 AUTO-LOGIN (CUSTOMER): FCM Token kaydediliyor...');
+        await _updateFCMToken();
+        print('✅ AUTO-LOGIN (CUSTOMER): FCM Token işlemi tamamlandı');
+        
         notifyListeners();
       }
     } catch (e) {
@@ -199,7 +205,13 @@ class AuthProvider with ChangeNotifier {
         debugPrint('✅ REGISTER: Customer ID set edildi: $_customerId');
         
         // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        await _updateFCMToken();
+        print('🔔🔔🔔 REGISTER: _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
+        try {
+          await _updateFCMToken();
+          print('✅ REGISTER: _updateFCMToken() TAMAMLANDI!');
+        } catch (fcmError) {
+          print('❌❌❌ REGISTER: _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
+        }
         
         _setLoading(false);
         return true;
@@ -240,7 +252,13 @@ class AuthProvider with ChangeNotifier {
         _customerId = '1';
         
         // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        await _updateFCMToken();
+        print('🔔🔔🔔 TEST LOGİN: _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
+        try {
+          await _updateFCMToken();
+          print('✅ TEST LOGİN: _updateFCMToken() TAMAMLANDI!');
+        } catch (fcmError) {
+          print('❌❌❌ TEST LOGİN: _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
+        }
         
         _setLoading(false);
         return true;
@@ -283,7 +301,13 @@ class AuthProvider with ChangeNotifier {
         }
         
         // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        await _updateFCMToken();
+        print('🔔🔔🔔 LOGİN (CUSTOMER): _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
+        try {
+          await _updateFCMToken();
+          print('✅ LOGİN (CUSTOMER): _updateFCMToken() TAMAMLANDI!');
+        } catch (fcmError) {
+          print('❌❌❌ LOGİN (CUSTOMER): _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
+        }
         
         _setLoading(false);
         return true;
