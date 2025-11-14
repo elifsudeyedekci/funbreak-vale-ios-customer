@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io'; // ✅ Platform.isIOS için gerekli!
 import 'admin_api_provider.dart';
 
 class AuthProvider with ChangeNotifier {
