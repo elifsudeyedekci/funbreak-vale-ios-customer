@@ -1038,29 +1038,21 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       final paymentStatus = (ride['payment_status'] ?? '').toString().toLowerCase();
                       final rideStatus = (ride['status'] ?? '').toString().toLowerCase();
                       final pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
-                      final unpaidStatuses = {
-                        '',
-                        'pending',
-                        'pending_payment',
-                        'waiting_confirmation',
-                        'waiting_payment',
-                        'unpaid',
-                        'not_paid',
-                        'failed'
-                      };
                       final paidStatuses = {
                         'paid',
                         'payment_completed',
                         'paid_manual',
                         'paid_auto',
-                        'settled'
+                        'payed_manual', // ✅ TYPO backend'de olabilir
+                        'payed_auto',   // ✅ TYPO backend'de olabilir
+                        'settled',
+                        'completed'     // ✅ Bazı yerlerde completed kullanılıyor
                       };
-                      final hasDebt = unpaidStatuses.contains(paymentStatus) || pendingAmount > 0.0;
                       final isRideFinished = ['completed', 'cancelled'].contains(rideStatus);
                       final isPaid = paidStatuses.contains(paymentStatus);
 
-                      // ✅ ÖNCE PAİD KONTROLÜ - PAID İSE BORÇ ÖDE GÖSTERME!
-                      if (isPaid) {
+                      // ✅ KRİTİK MANTIK: isPaid VEYA pendingAmount = 0 → Ödendi
+                      if (isPaid || pendingAmount == 0) {
                         return Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1087,10 +1079,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         );
                       }
 
-                      if (hasDebt && isRideFinished && !isPaid) {
-                        final buttonLabel = pendingAmount > 0
-                            ? 'Borç Öde (₺${pendingAmount.toStringAsFixed(2)})'
-                            : 'Borç Öde';
+                      // ✅ SADECE pending_payment_amount > 0 İSE BORÇ ÖDE GÖSTER!
+                      if (pendingAmount > 0 && isRideFinished) {
+                        final buttonLabel = 'Borç Öde (₺${pendingAmount.toStringAsFixed(2)})';
 
                         return Expanded(
                           child: ElevatedButton.icon(
@@ -1106,6 +1097,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         );
                       }
 
+                      // DİĞER DURUMLAR - Gri bilgi kutusu
                       return Expanded(
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1120,7 +1112,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                               const Icon(Icons.info_outline, color: Colors.grey, size: 18),
                               const SizedBox(width: 4),
                               Text(
-                                paymentStatus.isNotEmpty ? paymentStatus.toUpperCase() : 'ÖDEME DURUMU YOK',
+                                paymentStatus.isNotEmpty ? paymentStatus.toUpperCase() : 'ÖDEME BEKLENİYOR',
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontWeight: FontWeight.bold,
