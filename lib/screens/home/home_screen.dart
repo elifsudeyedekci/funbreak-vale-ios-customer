@@ -6802,7 +6802,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
         print('📊 BORÇ KONTROL RESPONSE: ${data['has_debt']}, total_debt: ${data['total_debt']}');
         
         if (data['success'] == true && data['has_debt'] == true) {
-          final totalDebt = data['total_debt'] ?? 0.0;
+          final totalDebt = (data['total_debt'] as num?)?.toDouble() ?? 0.0; // ✅ int/double safe parse
           final pendingRides = List<Map<String, dynamic>>.from(data['pending_rides'] ?? []);
           
           print('🚨 BORÇ VAR! Toplam: ₺$totalDebt, ${pendingRides.length} yolculuk');
