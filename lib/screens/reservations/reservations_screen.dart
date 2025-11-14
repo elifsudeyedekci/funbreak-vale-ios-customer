@@ -1038,6 +1038,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       final rideStatus = (ride['status'] ?? '').toString().toLowerCase();
                       final pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
                       final isRideFinished = ['completed', 'cancelled'].contains(rideStatus);
+                      
+                      // DEBUG LOG
+                      print('🔍 [BORÇ ÖDE] Ride #${ride['id']}: status=$rideStatus, pending_payment_amount=$pendingAmount, isRideFinished=$isRideFinished');
 
                       // ✅ SADECE pending_payment_amount > 0 İSE BORÇ ÖDE GÖSTER!
                       if (pendingAmount > 0 && isRideFinished) {
