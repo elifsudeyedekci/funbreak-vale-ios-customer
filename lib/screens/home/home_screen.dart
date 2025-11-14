@@ -6799,18 +6799,35 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('📊 BORÇ KONTROL RESPONSE: ${data['has_debt']}, total_debt: ${data['total_debt']}');
+        
         if (data['success'] == true && data['has_debt'] == true) {
           final totalDebt = data['total_debt'] ?? 0.0;
           final pendingRides = List<Map<String, dynamic>>.from(data['pending_rides'] ?? []);
           
+          print('🚨 BORÇ VAR! Toplam: ₺$totalDebt, ${pendingRides.length} yolculuk');
           _showDebtWarning(totalDebt, pendingRides);
-          return false;
+          return false; // Talep oluşturmaya izin verme!
         }
+        
+        print('✅ BORÇ YOK - Talep oluşturabilir');
+        return true;
       }
-      return true;
+      
+      print('⚠️ Borç kontrol API başarısız: ${response.statusCode}');
+      return true; // API çalışmazsa geçici olarak izin ver
     } catch (e) {
       print('❌ Borç kontrol hatası: $e');
-      return true;
+      
+      // ⚠️ Güvenlik için: Hata durumunda uyarı göster AMA engelleme!
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Borç kontrol sistemi geçici olarak çalışmıyor. Lütfen daha sonra tekrar deneyin.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return false; // GÜVENLİK: Hata durumunda engelle!
     }
   }
   
