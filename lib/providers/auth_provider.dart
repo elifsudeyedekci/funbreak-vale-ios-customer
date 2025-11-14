@@ -423,104 +423,127 @@ class AuthProvider with ChangeNotifier {
   
   // ✅ FCM TOKEN GÜNCELLEME - LOGIN/REGISTER SONRASI OTOMATIK ÇAĞRILIR!
   Future<void> _updateFCMToken() async {
-    debugPrint('🔔🔔🔔 _updateFCMToken() BAŞLADI! 🔔🔔🔔');
+    print('🔔🔔🔔 iOS CUSTOMER: _updateFCMToken() BAŞLADI! 🔔🔔🔔');
+    print('📍 STACK TRACE: ${StackTrace.current}');
+    
     try {
-      debugPrint('🔔 FCM Token güncelleme başlatılıyor...');
+      print('🔔 MÜŞTERİ: FCM Token güncelleme başlatılıyor...');
+      print('📱 iOS VERSION CHECK: ${Platform.isIOS ? "iOS" : "Android"}');
       
       final prefs = await SharedPreferences.getInstance();
       
-      // ✅ DEBUG: Tüm key'leri kontrol et
+      // ✅ DEBUG: Tüm key'leri kontrol et - print() KULLAN (backend log'a düşsün!)
       final allKeys = prefs.getKeys();
-      debugPrint('🔍 iOS FCM: SharedPreferences keys: $allKeys');
-      debugPrint('🔍 iOS FCM: admin_user_id = ${prefs.getString('admin_user_id')}');
-      debugPrint('🔍 iOS FCM: user_id = ${prefs.getString('user_id')}');
-      debugPrint('🔍 iOS FCM: customer_id = ${prefs.getString('customer_id')}');
-      debugPrint('🔍 iOS FCM: is_logged_in = ${prefs.getBool('is_logged_in')}');
+      print('🔍 iOS CUSTOMER FCM: SharedPreferences keys: $allKeys');
+      print('🔍 iOS CUSTOMER FCM: admin_user_id = ${prefs.getString('admin_user_id')}');
+      print('🔍 iOS CUSTOMER FCM: user_id = ${prefs.getString('user_id')}');
+      print('🔍 iOS CUSTOMER FCM: customer_id = ${prefs.getString('customer_id')}');
+      print('🔍 iOS CUSTOMER FCM: is_logged_in = ${prefs.getBool('is_logged_in')}');
       
-      final userId = prefs.getString('admin_user_id') ?? 
-                     prefs.getString('customer_id') ?? 
-                     prefs.getString('user_id');
+      final customerUserId = prefs.getString('admin_user_id') ?? 
+                             prefs.getString('customer_id') ?? 
+                             prefs.getString('user_id');
       
-      debugPrint('🔍 iOS FCM: Final userId = $userId');
+      print('🔍 iOS CUSTOMER FCM: Final userId = $customerUserId');
       
-      if (userId == null || userId.isEmpty) {
-        debugPrint('❌❌❌ User ID NULL - RETURN EDİYOR! ❌❌❌');
+      if (customerUserId == null || customerUserId.isEmpty) {
+        print('❌❌❌ iOS CUSTOMER: User ID NULL - RETURN EDİYOR! ❌❌❌');
         return;
       }
       
-      debugPrint('✅ User ID BULUNDU: $userId - Devam ediliyor...');
+      print('✅ iOS CUSTOMER: User ID BULUNDU: $customerUserId - Devam ediliyor...');
       
       // FCM Token al (iOS için önce izin!)
-      debugPrint('📱 FirebaseMessaging instance alınıyor...');
+      print('📱 iOS CUSTOMER: FirebaseMessaging instance alınıyor...');
       final messaging = FirebaseMessaging.instance;
-      debugPrint('✅ FirebaseMessaging instance alındı!');
+      print('✅ iOS CUSTOMER: FirebaseMessaging instance alındı!');
       
       // ✅ iOS için bildirim izni iste!
-      debugPrint('🔔 iOS bildirim izni isteniyor...');
+      print('🔔 iOS CUSTOMER: Bildirim izni isteniyor...');
       final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
-      debugPrint('✅ İzin isteği tamamlandı!');
+      print('✅ iOS CUSTOMER: İzin isteği tamamlandı!');
       
-      debugPrint('🔔 iOS bildirim izni: ${settings.authorizationStatus}');
-      debugPrint('🔔 Alert: ${settings.alert}, Badge: ${settings.badge}, Sound: ${settings.sound}');
+      print('🔔 iOS CUSTOMER bildirim izni: ${settings.authorizationStatus}');
+      print('🔔 Alert: ${settings.alert}, Badge: ${settings.badge}, Sound: ${settings.sound}');
       
       if (settings.authorizationStatus != AuthorizationStatus.authorized && 
           settings.authorizationStatus != AuthorizationStatus.provisional) {
-        debugPrint('❌❌❌ iOS bildirim izni REDDEDİLDİ - Status: ${settings.authorizationStatus} ❌❌❌');
+        print('❌❌❌ iOS CUSTOMER: Bildirim izni REDDEDİLDİ - Status: ${settings.authorizationStatus} ❌❌❌');
         return;
       }
       
-      debugPrint('✅ İzin VERİLDİ - Token alınacak...');
+      print('✅ iOS CUSTOMER: İzin VERİLDİ - Token alınacak...');
       
       final fcmToken = await messaging.getToken().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          debugPrint('⏱️ FCM Token timeout');
+          print('⏱️ iOS CUSTOMER: FCM Token timeout');
           return null;
         },
       );
       
       if (fcmToken == null || fcmToken.isEmpty) {
-        debugPrint('⚠️ FCM Token alınamadı - APNs kontrol et!');
+        print('⚠️ iOS CUSTOMER: FCM Token alınamadı - APNs kontrol et!');
         return;
       }
       
-      debugPrint('✅ FCM Token alındı: ${fcmToken.substring(0, 20)}...');
-      debugPrint('📤 Backend\'e gönderiliyor - User ID: $userId, Type: customer');
+      print('✅ iOS CUSTOMER: FCM Token alındı: ${fcmToken.substring(0, 20)}...');
+      print('📤 iOS CUSTOMER: Backend\'e gönderiliyor - User ID: $customerUserId, Type: customer');
       
       // Backend'e gönder
       try {
-        debugPrint('🌐 HTTP POST başlatılıyor...');
+        print('🌐 iOS CUSTOMER: HTTP POST başlatılıyor (update_fcm_token.php)...');
         final response = await http.post(
           Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'user_id': userId,
+            'user_id': customerUserId,
             'user_type': 'customer',
             'fcm_token': fcmToken,
           }),
         ).timeout(const Duration(seconds: 10));
         
-        debugPrint('📥 HTTP Response alındı - Status: ${response.statusCode}');
+        print('📥 iOS CUSTOMER: HTTP Response alındı - Status: ${response.statusCode}');
         
         if (response.statusCode == 200) {
           final responseData = jsonDecode(response.body);
-          debugPrint('✅✅✅ FCM Token backend\'e kaydedildi! ✅✅✅');
-          debugPrint('🔍 iOS FCM: Backend response = $responseData');
+          print('✅✅✅ iOS CUSTOMER: FCM Token backend\'e kaydedildi! ✅✅✅');
+          print('🔍 iOS CUSTOMER FCM: Backend response = $responseData');
         } else {
-          debugPrint('⚠️⚠️ FCM Token backend kayıt hatası: ${response.statusCode} ⚠️⚠️');
-          debugPrint('🔍 iOS FCM: Response body = ${response.body}');
+          print('⚠️⚠️ iOS CUSTOMER: FCM Token backend kayıt hatası: ${response.statusCode} ⚠️⚠️');
+          print('🔍 iOS CUSTOMER FCM: Response body = ${response.body}');
         }
       } catch (httpError) {
-        debugPrint('❌❌ HTTP REQUEST HATASI: $httpError ❌❌');
+        print('❌❌ iOS CUSTOMER: HTTP REQUEST HATASI: $httpError ❌❌');
         rethrow;
       }
     } catch (e, stackTrace) {
-      debugPrint('❌❌❌ FCM Token güncelleme EXCEPTION: $e ❌❌❌');
-      debugPrint('Stack trace: $stackTrace');
+      print('❌❌❌ iOS CUSTOMER: FCM Token güncelleme EXCEPTION: $e ❌❌❌');
+      print('❌ Exception Type: ${e.runtimeType}');
+      print('❌ Stack trace: $stackTrace');
+      
+      // Backend'e hata log gönder
+      try {
+        await http.post(
+          Uri.parse('https://admin.funbreakvale.com/api/log_client_error.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'error_type': 'iOS_CUSTOMER_FCM_EXCEPTION',
+            'error_message': e.toString(),
+            'stack_trace': stackTrace.toString(),
+            'timestamp': DateTime.now().toIso8601String(),
+          }),
+        ).timeout(const Duration(seconds: 5));
+      } catch (logError) {
+        print('❌ Error log gönderilemedi: $logError');
+      }
+      
+      // Exception'ı yeniden fırlat ki görelim!
+      rethrow;
     }
   }
 }
