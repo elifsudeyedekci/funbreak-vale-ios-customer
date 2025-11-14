@@ -1032,52 +1032,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       (ride['invoice_id'] != null && ride['invoice_id'] > 0))
                     const SizedBox(width: 8),
                   
-                  // ÖDEME DURUMU VEYA BORÇ ÖDE BUTONU
+                  // BORÇ ÖDE BUTONU - SADECE BORÇ VARSA GÖSTER
                   Builder(
                     builder: (context) {
-                      final paymentStatus = (ride['payment_status'] ?? '').toString().toLowerCase();
                       final rideStatus = (ride['status'] ?? '').toString().toLowerCase();
                       final pendingAmount = (ride['pending_payment_amount'] as num?)?.toDouble() ?? 0.0;
-                      final paidStatuses = {
-                        'paid',
-                        'payment_completed',
-                        'paid_manual',
-                        'paid_auto',
-                        'payed_manual', // ✅ TYPO backend'de olabilir
-                        'payed_auto',   // ✅ TYPO backend'de olabilir
-                        'settled',
-                        'completed'     // ✅ Bazı yerlerde completed kullanılıyor
-                      };
                       final isRideFinished = ['completed', 'cancelled'].contains(rideStatus);
-                      final isPaid = paidStatuses.contains(paymentStatus);
-
-                      // ✅ KRİTİK MANTIK: isPaid VEYA pendingAmount = 0 → Ödendi
-                      if (isPaid || pendingAmount == 0) {
-                        return Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.check_circle, color: Colors.green, size: 18),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Ödendi',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
 
                       // ✅ SADECE pending_payment_amount > 0 İSE BORÇ ÖDE GÖSTER!
                       if (pendingAmount > 0 && isRideFinished) {
@@ -1097,31 +1057,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         );
                       }
 
-                      // DİĞER DURUMLAR - Gri bilgi kutusu
-                      return Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.info_outline, color: Colors.grey, size: 18),
-                              const SizedBox(width: 4),
-                              Text(
-                                paymentStatus.isNotEmpty ? paymentStatus.toUpperCase() : 'ÖDEME BEKLENİYOR',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                      // BORÇ YOKSA HİÇBİR ŞEY GÖSTERME!
+                      return const SizedBox.shrink();
                     },
                   ),
                 ],
