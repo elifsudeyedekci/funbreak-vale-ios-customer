@@ -16,6 +16,29 @@ class AuthProvider with ChangeNotifier {
   FirebaseAuth? get auth => _auth;
   FirebaseFirestore? get firestore => _firestore;
   
+  // ✅ iOS DEBUG LOG - BACKEND'E GÖNDER!
+  Future<void> _logToBackend(String message, {String level = 'INFO'}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customerId = prefs.getString('admin_user_id') ?? prefs.getString('customer_id') ?? prefs.getString('user_id') ?? 'UNKNOWN';
+      
+      await http.post(
+        Uri.parse('https://admin.funbreakvale.com/api/log_ios_debug.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'app_name': 'CUSTOMER',
+          'log_level': level,
+          'message': message,
+          'driver_id': '',
+          'customer_id': customerId,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      ).timeout(const Duration(seconds: 2));
+    } catch (e) {
+      // Sessiz başarısız - log gönderme hatası ana işlemi durdurmasın!
+    }
+  }
+  
   bool _isAuthenticated = false;
   bool _isLoading = false;
   String? _error;
@@ -445,11 +468,12 @@ class AuthProvider with ChangeNotifier {
   // ✅ FCM TOKEN GÜNCELLEME - LOGIN/REGISTER SONRASI OTOMATIK ÇAĞRILIR!
   Future<void> _updateFCMToken() async {
     print('🔔🔔🔔 iOS CUSTOMER: _updateFCMToken() BAŞLADI! 🔔🔔🔔');
-    print('📍 STACK TRACE: ${StackTrace.current}');
+    await _logToBackend('🔔 FCM _updateFCMToken BAŞLADI (CUSTOMER)');
     
     try {
       print('🔔 MÜŞTERİ: FCM Token güncelleme başlatılıyor...');
       print('📱 iOS VERSION CHECK: ${Platform.isIOS ? "iOS" : "Android"}');
+      await _logToBackend('iOS VERSION: ${Platform.isIOS ? "iOS" : "Android"}');
       
       final prefs = await SharedPreferences.getInstance();
       
@@ -466,13 +490,16 @@ class AuthProvider with ChangeNotifier {
                              prefs.getString('user_id');
       
       print('🔍 iOS CUSTOMER FCM: Final userId = $customerUserId');
+      await _logToBackend('FCM userId = $customerUserId');
       
       if (customerUserId == null || customerUserId.isEmpty) {
         print('❌❌❌ iOS CUSTOMER: User ID NULL - RETURN EDİYOR! ❌❌❌');
+        await _logToBackend('❌ FCM USER ID NULL!', level: 'ERROR');
         return;
       }
       
       print('✅ iOS CUSTOMER: User ID BULUNDU: $customerUserId - Devam ediliyor...');
+      await _logToBackend('✅ FCM User ID bulundu: $customerUserId');
       
       // FCM Token al (iOS için önce izin!)
       print('📱 iOS CUSTOMER: FirebaseMessaging instance alınıyor...');
@@ -509,15 +536,19 @@ class AuthProvider with ChangeNotifier {
       
       if (fcmToken == null || fcmToken.isEmpty) {
         print('⚠️ iOS CUSTOMER: FCM Token alınamadı - APNs kontrol et!');
+        await _logToBackend('❌ FCM Token NULL!', level: 'ERROR');
         return;
       }
       
       print('✅ iOS CUSTOMER: FCM Token alındı: ${fcmToken.substring(0, 20)}...');
       print('📤 iOS CUSTOMER: Backend\'e gönderiliyor - User ID: $customerUserId, Type: customer');
+      await _logToBackend('✅ FCM Token alındı: ${fcmToken.substring(0, 20)}...');
       
       // Backend'e gönder
       try {
         print('🌐 iOS CUSTOMER: HTTP POST başlatılıyor (update_fcm_token.php)...');
+        await _logToBackend('FCM HTTP POST başlatıldı');
+        
         final response = await http.post(
           Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
           headers: {'Content-Type': 'application/json'},
@@ -529,14 +560,17 @@ class AuthProvider with ChangeNotifier {
         ).timeout(const Duration(seconds: 10));
         
         print('📥 iOS CUSTOMER: HTTP Response alındı - Status: ${response.statusCode}');
+        await _logToBackend('FCM API Response: ${response.statusCode}');
         
         if (response.statusCode == 200) {
           final responseData = jsonDecode(response.body);
           print('✅✅✅ iOS CUSTOMER: FCM Token backend\'e kaydedildi! ✅✅✅');
           print('🔍 iOS CUSTOMER FCM: Backend response = $responseData');
+          await _logToBackend('✅✅✅ FCM BAŞARILI: $responseData', level: 'SUCCESS');
         } else {
           print('⚠️⚠️ iOS CUSTOMER: FCM Token backend kayıt hatası: ${response.statusCode} ⚠️⚠️');
           print('🔍 iOS CUSTOMER FCM: Response body = ${response.body}');
+          await _logToBackend('❌ FCM API ERROR: ${response.statusCode} - ${response.body}', level: 'ERROR');
         }
       } catch (httpError) {
         print('❌❌ iOS CUSTOMER: HTTP REQUEST HATASI: $httpError ❌❌');
@@ -545,23 +579,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e, stackTrace) {
       print('❌❌❌ iOS CUSTOMER: FCM Token güncelleme EXCEPTION: $e ❌❌❌');
       print('❌ Exception Type: ${e.runtimeType}');
-      print('❌ Stack trace: $stackTrace');
-      
-      // Backend'e hata log gönder
-      try {
-        await http.post(
-          Uri.parse('https://admin.funbreakvale.com/api/log_client_error.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'error_type': 'iOS_CUSTOMER_FCM_EXCEPTION',
-            'error_message': e.toString(),
-            'stack_trace': stackTrace.toString(),
-            'timestamp': DateTime.now().toIso8601String(),
-          }),
-        ).timeout(const Duration(seconds: 5));
-      } catch (logError) {
-        print('❌ Error log gönderilemedi: $logError');
-      }
+      await _logToBackend('❌❌❌ FCM EXCEPTION: $e (Type: ${e.runtimeType})', level: 'ERROR');
       
       // Exception'ı yeniden fırlat ki görelim!
       rethrow;
