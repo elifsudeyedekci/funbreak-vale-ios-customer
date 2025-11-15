@@ -53,18 +53,10 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   // ✅ SMS OTOMATİK OKUMA
   Future<void> _listenForCode() async {
     try {
-      final code = await SmsAutoFill().listenForCode();
-      if (code != null && code.isNotEmpty) {
-        final digitsOnly = code.replaceAll(RegExp(r'[^0-9]'), '');
-        if (digitsOnly.length >= 6) {
-          for (int i = 0; i < 6; i++) {
-            _codeControllers[i].text = digitsOnly[i];
-          }
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _verifyCode();
-          });
-        }
-      }
+      // listenForCode void döndürür, onCodeCallback kullan
+      SmsAutoFill().listenForCode();
+      // Alternatif: code bekleme yok, manuel paste ile çalışır
+      // _handlePastedCode() zaten var, maxLength=6 ile çalışır
     } catch (e) {
       print('SMS otomatik okuma hatası: $e');
     }
