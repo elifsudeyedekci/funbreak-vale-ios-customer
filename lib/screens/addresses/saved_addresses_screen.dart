@@ -1220,21 +1220,21 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       try {
         final prefs = await SharedPreferences.getInstance();
         final customerId = prefs.getString('admin_user_id') ?? prefs.getString('customer_id') ?? '0';
-        final addressId = widget.address!['id'];
+        final addressId = widget.address!.id; // ✅ SavedAddress obje, Map değil!
         
         final response = await http.post(
           Uri.parse('https://admin.funbreakvale.com/api/update_saved_address.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'address_id': addressId,
+            'address_id': int.tryParse(addressId) ?? 0,
             'customer_id': int.parse(customerId),
             'name': _nameController.text.trim(),
             'address': _selectedAddress,
-            'description': _descriptionController.text.trim(),
+            'description': _notesController.text.trim(), // ✅ _notesController!
             'latitude': _selectedLocation!.latitude,
             'longitude': _selectedLocation!.longitude,
             'type': _selectedType,
-            'is_favorite': _isFavorite ? 1 : 0,
+            'is_favorite': widget.address!.isFavorite ? 1 : 0, // ✅ widget.address.isFavorite!
           }),
         ).timeout(const Duration(seconds: 10));
         
