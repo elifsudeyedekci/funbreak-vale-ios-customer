@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io'; // ✅ Platform.isIOS için gerekli!
+import 'dart:math'; // ✅ Random için!
 import 'admin_api_provider.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -47,6 +48,7 @@ class AuthProvider with ChangeNotifier {
   String? _customerName;
   String? _customerPhone;
   double _pendingPaymentAmount = 0.0; // BEKLEYEN ÖDEME MİKTARI
+  String? _deviceId; // ✅ ÇOKLU OTURUM İÇİN DEVICE ID
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
@@ -58,6 +60,27 @@ class AuthProvider with ChangeNotifier {
   String? get customerPhone => _customerPhone;
   double get pendingPaymentAmount => _pendingPaymentAmount; // BEKLEYEN ÖDEME GETTERı
   bool get hasPendingPayment => _pendingPaymentAmount > 0; // BEKLEYEN ÖDEME KONTROL
+  String? get deviceId => _deviceId; // DEVICE ID GETTER
+  
+  // ✅ DEVICE ID OLUŞTUR VEYA AL (UUID benzeri benzersiz kimlik)
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceId = prefs.getString('device_id');
+    
+    if (deviceId == null || deviceId.isEmpty) {
+      // Yeni device ID oluştur (timestamp + random)
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final random = Random().nextInt(999999);
+      deviceId = 'device_${timestamp}_$random';
+      await prefs.setString('device_id', deviceId);
+      print('✅ Yeni device ID oluşturuldu: $deviceId');
+    } else {
+      print('✅ Mevcut device ID: $deviceId');
+    }
+    
+    _deviceId = deviceId;
+    return deviceId;
+  }
 
   // Session persistence için constructor
   AuthProvider() {
@@ -255,6 +278,10 @@ class AuthProvider with ChangeNotifier {
     _error = null;
 
     try {
+      // ✅ ÇOKLU OTURUM: Device ID al veya oluştur
+      final deviceId = await _getOrCreateDeviceId();
+      print('🔐 LOGIN: Device ID = $deviceId');
+      
       // Test hesapları için direkt giriş
       if (email == "test@customer.com" && password == "123456") {
         final prefs = await SharedPreferences.getInstance();
@@ -317,6 +344,22 @@ class AuthProvider with ChangeNotifier {
         } catch (firebaseError) {
           debugPrint('Firebase giriş hatası: $firebaseError');
           // Admin panel girişi başarılı olduğu için devam et
+        }
+        
+        // ✅ ÇOKLU OTURUM: Eski cihazları logout yap
+        try {
+          await http.post(
+            Uri.parse('https://admin.funbreakvale.com/api/logout_other_devices.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'user_id': _customerId,
+              'device_id': deviceId,
+              'user_type': 'customer',
+            }),
+          ).timeout(const Duration(seconds: 5));
+          print('✅ Çoklu oturum: Eski cihazlar logout yapıldı');
+        } catch (e) {
+          print('⚠️ Çoklu oturum hatası (devam ediliyor): $e');
         }
         
         // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
