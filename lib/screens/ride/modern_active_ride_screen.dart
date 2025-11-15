@@ -55,6 +55,9 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
   double _currentPrice = 0.0;
   double _currentHours = 0.0;
   
+  // ✅ TAHMİNİ FİYAT (SABİT - İlk rota fiyatı, BİR DAHA DEĞİŞMEZ!)
+  double _initialEstimatedPrice = 0.0;
+  
   // ✅ SAATLİK PAKET CACHE
   List<Map<String, double>> _cachedHourlyPackages = [];
   
@@ -67,6 +70,18 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
     _initializeAnimations();
     _saveToPersistence();
     _loadHourlyPackages(); // Panel'den saatlik paketleri çek!
+    
+    // ✅ TAHMİNİ FİYAT (SABİT) - İLK ROTA SEÇERKENKİ FİYAT (BİR KEZ SET EDİLİR, DEĞİŞMEZ!)
+    _initialEstimatedPrice = double.tryParse(
+          widget.rideDetails['initial_estimated_price']?.toString() ??
+          widget.rideDetails['estimated_price']?.toString() ??
+          '0',
+        ) ??
+        0.0;
+    if (_initialEstimatedPrice == 0.0) {
+      _initialEstimatedPrice = 1000.0; // Fallback (minimum)
+    }
+    print('📌 [MÜŞTERİ] Tahmini fiyat (sabit): ₺${_initialEstimatedPrice} - Bu değişmeyecek!');
     
     // Başlangıçta konumları ayarla
     _customerLocation = LatLng(
@@ -3022,15 +3037,10 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     return int.tryParse(waitingMinutes.toString()) ?? 0;
   }
   
-  // ✅ İLK TAHMİNİ FİYAT (SABİT - İlk rotaya girdiğinde belirlenen fiyat, BEKLEME YOK!)
+  // ✅ İLK TAHMİNİ FİYAT (SABİT - İlk rotaya girdiğinde belirlenen fiyat, BEKLEME YOK, DEĞİŞMEZ!)
   String _getInitialEstimatedPrice() {
-    // Backend'den gelen initial_estimated_price kullan (bekleme olmadan!)
-    final initialPrice = double.tryParse(
-      _currentRideStatus['initial_estimated_price']?.toString() ?? 
-      widget.rideDetails['initial_estimated_price']?.toString() ?? 
-      widget.rideDetails['estimated_price']?.toString() ?? '0'
-    ) ?? 0.0;
-    return initialPrice.toStringAsFixed(0);
+    // ✅ Class değişkeninden döndür (initState'te bir kez set edildi, bir daha değişmez!)
+    return _initialEstimatedPrice.toStringAsFixed(0);
   }
   
   // ✅ GÜNCEL TOPLAM (DİNAMİK - Backend'den direkt çek, ZATEN BEKLEME DAHİL!)
