@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:sms_autofill/sms_autofill.dart'; // ✅ SMS OTOMATİK OKUMA!
 import 'dart:convert';
 import 'dart:async';
 import '../../providers/auth_provider.dart';
@@ -46,11 +47,33 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    _listenForCode(); // ✅ SMS OTOMATİK OKUMA BAŞLAT!
+  }
+  
+  // ✅ SMS OTOMATİK OKUMA
+  Future<void> _listenForCode() async {
+    try {
+      final code = await SmsAutoFill().listenForCode();
+      if (code != null && code.isNotEmpty) {
+        final digitsOnly = code.replaceAll(RegExp(r'[^0-9]'), '');
+        if (digitsOnly.length >= 6) {
+          for (int i = 0; i < 6; i++) {
+            _codeControllers[i].text = digitsOnly[i];
+          }
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _verifyCode();
+          });
+        }
+      }
+    } catch (e) {
+      print('SMS otomatik okuma hatası: $e');
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    SmsAutoFill().unregisterListener(); // ✅ SMS listener temizle
     for (var controller in _codeControllers) {
       controller.dispose();
     }
@@ -382,12 +405,16 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
         focusNode: _focusNodes[index],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        maxLength: 1,
+        maxLength: 6, // ✅ 6 YAP - Paste için!
+        autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null, // ✅ iOS SMS
         style: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
         ),
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(6), // Max 6 rakam
+        ],
         decoration: InputDecoration(
           counterText: '',
           border: OutlineInputBorder(

@@ -2,7 +2,7 @@ name: funbreak_vale_customer
 description: "FunBreak Vale Customer App"
 publish_to: 'none'
 
-version: 1.4.0+148
+version: 1.4.0+149
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -30,6 +30,7 @@ dependencies:
   image_picker: ^1.0.4
   flutter_sound: ^9.28.0
   path_provider: ^2.1.1
+  sms_autofill: ^2.3.0
   webview_flutter: ^4.13.0
 
 dev_dependencies:
