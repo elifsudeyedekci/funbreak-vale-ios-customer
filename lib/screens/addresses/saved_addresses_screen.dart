@@ -1209,6 +1209,56 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       );
       return;
     }
+    
+    setState(() => _isLoading = true);
+    
+    // ✅ BACKEND'E GÜNCELLEME GÖNDER (widget.address varsa)
+    if (widget.address != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final customerId = prefs.getString('admin_user_id') ?? prefs.getString('customer_id') ?? '0';
+        final addressId = widget.address!['id'];
+        
+        final response = await http.post(
+          Uri.parse('https://admin.funbreakvale.com/api/update_saved_address.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'address_id': addressId,
+            'customer_id': int.parse(customerId),
+            'name': _nameController.text.trim(),
+            'address': _selectedAddress,
+            'description': _descriptionController.text.trim(),
+            'latitude': _selectedLocation!.latitude,
+            'longitude': _selectedLocation!.longitude,
+            'type': _selectedType,
+            'is_favorite': _isFavorite ? 1 : 0,
+          }),
+        ).timeout(const Duration(seconds: 10));
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('✅ Adres güncellendi'), backgroundColor: Colors.green),
+              );
+              Navigator.pop(context, true); // Başarılı, geri dön
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        print('❌ Adres güncelleme hatası: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Güncelleme hatası: $e'), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
