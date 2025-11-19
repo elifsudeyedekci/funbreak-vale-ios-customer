@@ -2,7 +2,7 @@ name: funbreak_vale_customer
 description: "FunBreak Vale Customer App"
 publish_to: 'none'
 
-version: 1.4.0+156
+version: 1.4.0+157
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
