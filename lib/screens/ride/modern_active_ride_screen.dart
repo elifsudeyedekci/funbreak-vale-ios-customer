@@ -2041,23 +2041,100 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     );
   }
 
+  // TEST HESAP KONTROLÜ - APPLE REVIEW İÇİN! ✅
+  Future<bool> _isTestAccount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userEmail = prefs.getString('user_email') ?? '';
+      final userPhone = prefs.getString('user_phone') ?? '';
+      
+      // Apple Review test hesabı - GERÇEK BİLGİLER!
+      final testEmails = [
+        'test@customer.com',           // Apple Review hesabı
+        'test@funbreakvale.com',       // İç test hesabı
+        'demo@funbreakvale.com'        // Demo hesabı
+      ];
+      
+      final testPhones = [
+        '5555555555',                  // Apple Review test telefonu
+        '5554443322',                  // SMS demo bypass
+        '5001234567',                  // SMS demo bypass
+      ];
+      
+      return testEmails.contains(userEmail) || 
+             testPhones.any((phone) => userPhone.contains(phone));
+    } catch (e) {
+      print('⚠️ Test hesap kontrolü hatası: $e');
+      return false;
+    }
+  }
+  
   // ŞİRKET KÖPRÜ ARAMA SİSTEMİ! ✅
   // ✅ NETGSM KÖPRÜ ARAMA SİSTEMİ! 🔥
+  // ✅ APPLE REVIEW İÇİN GÜVENLİ HALE GETİRİLDİ!
   Future<void> _callDriverDirectly() async {
-    final driverName = _driverName();
-    final driverPhone = _driverPhone();
-    
-    // ✅ rideId int'e parse et!
-    final rideIdRaw = widget.rideDetails['ride_id'] ?? _currentRideStatus['ride_id'] ?? 0;
-    final rideId = rideIdRaw is int ? rideIdRaw : int.tryParse(rideIdRaw.toString()) ?? 0;
-    
-    // Köprü hattı numarası (SABİT!)
-    const bridgeNumber = '0216 606 45 10';
-    
-    print('📞 [MÜŞTERİ] Köprü arama başlatılıyor - Şoför: $driverName');
-    
-    // Bilgilendirme ve onay dialogu
-    showDialog(
+    try {
+      // TEST HESAP KONTROLÜ - Apple Review için!
+      if (await _isTestAccount()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: const [
+                  Icon(Icons.info_outline, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Demo hesap: Arama özelliği gerçek kullanıcılar için aktif',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        print('📞 Test hesap - Arama devre dışı (Apple Review)');
+        return;
+      }
+      
+      final driverName = _driverName();
+      final driverPhone = _driverPhone();
+      
+      // Telefon numarası kontrolü
+      if (driverPhone.isEmpty || driverPhone == 'null' || driverPhone == '0') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: const [
+                  Icon(Icons.warning, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Sürücü telefon numarası bulunamadı'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      // ✅ rideId int'e parse et!
+      final rideIdRaw = widget.rideDetails['ride_id'] ?? _currentRideStatus['ride_id'] ?? 0;
+      final rideId = rideIdRaw is int ? rideIdRaw : int.tryParse(rideIdRaw.toString()) ?? 0;
+      
+      // Köprü hattı numarası (SABİT!)
+      const bridgeNumber = '0216 606 45 10';
+      
+      print('📞 [MÜŞTERİ] Köprü arama başlatılıyor - Şoför: $driverName');
+      
+      // Bilgilendirme ve onay dialogu
+      showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
@@ -2140,6 +2217,29 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
         ],
       ),
     );
+    } catch (e, stackTrace) {
+      // CRASH PREVENTION - Apple Review için!
+      print('❌ Arama hatası yakalandı: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Arama başlatılamadı. Lütfen daha sonra tekrar deneyin.'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
   
   // ✅ KÖPRÜ ARAMASI BAŞLAT - BACKEND ÜZERİNDEN!
