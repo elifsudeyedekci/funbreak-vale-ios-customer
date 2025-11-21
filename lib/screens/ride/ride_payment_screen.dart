@@ -1751,44 +1751,6 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     }
   }
 
-  // ARA DURAKLAR ÖZET OLUŞTUR
-  List<Widget> _buildWaypointsSummary() {
-    try {
-      final waypointsJson = widget.rideStatus['waypoints'] ?? widget.rideDetails['waypoints'];
-      
-      if (waypointsJson == null || waypointsJson.toString().isEmpty || waypointsJson.toString() == 'null') {
-        return [];
-      }
-      
-      List<dynamic> waypoints = [];
-      if (waypointsJson is String) {
-        waypoints = jsonDecode(waypointsJson);
-      } else if (waypointsJson is List) {
-        waypoints = waypointsJson;
-      }
-      
-      if (waypoints.isEmpty) {
-        return [];
-      }
-      
-      List<Widget> waypointWidgets = [];
-      for (int i = 0; i < waypoints.length; i++) {
-        final waypoint = waypoints[i];
-        final address = waypoint['address'] ?? waypoint['adres'] ?? waypoint['name'] ?? 'Ara Durak ${i + 1}';
-        
-        waypointWidgets.add(
-          _buildSummaryRow('🛣️ Ara Durak ${i + 1}', address, color: Colors.orange),
-        );
-        waypointWidgets.add(const SizedBox(height: 8));
-      }
-      
-      return waypointWidgets;
-    } catch (e) {
-      print('⚠️ Waypoints parse hatası (ödeme ekranı): $e');
-      return [];
-    }
-  }
-
   @override
   void dispose() {
     _animController.dispose();
