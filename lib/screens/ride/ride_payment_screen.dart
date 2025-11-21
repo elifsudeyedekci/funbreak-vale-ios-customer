@@ -220,22 +220,48 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                                    widget.rideDetails['estimated_price'] ?? 
                                    estimatedPrice;
     
-    // final_price varsa onu kullan (tamamlanmış yolculuk)
-    if (finalPrice != null && finalPrice > 0) {
-      _totalPrice = double.tryParse(finalPrice.toString()) ?? 0.0;
-      _basePrice = _totalPrice; // Tam tutar
-      _waitingFee = 0.0; // Backend'de zaten hesaplanmış
-      print('💳 ÖDEME: final_price kullanılıyor (completed): ₺${_totalPrice.toStringAsFixed(2)}');
-    } else {
-      // Backend'den gelen estimated_price kullan
-      _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
-      _basePrice = _totalPrice; // Backend zaten toplam hesaplamış
-      _waitingFee = 0.0; // Backend'de zaten dahil
-      print('💳 ÖDEME: Backend estimated_price (bekleme dahil): ₺${_totalPrice.toStringAsFixed(2)}');
-    }
+      // Backend'den ayrı değerleri çek (varsa)
+      final backendBasePrice = widget.rideStatus['base_price_only'] ?? 
+                                widget.rideStatus['distance_only_price'] ?? 
+                                widget.rideDetails['base_price_only'];
+      
+      // final_price varsa onu kullan (tamamlanmış yolculuk)
+      if (finalPrice != null && finalPrice > 0) {
+        _totalPrice = double.tryParse(finalPrice.toString()) ?? 0.0;
+      } else {
+        // Backend'den gelen estimated_price kullan
+        _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
+      }
+      
+      // MESAFE VE BEKLEME AYRI HESAPLA
+      if (backendBasePrice != null && backendBasePrice > 0) {
+        // Backend base_price_only gönderiyor (mesafe ücreti)
+        _basePrice = double.tryParse(backendBasePrice.toString()) ?? 0.0;
+        // Bekleme = Toplam - Mesafe
+        _waitingFee = _totalPrice - _basePrice;
+        print('💳 ÖDEME: Backend base_price_only kullanıldı - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
+      } else {
+        // Backend base_price_only göndermemişse manuel hesapla
+        _waitingFee = _calculateWaitingFee(_waitingMinutes);
+        _basePrice = _totalPrice - _waitingFee;
+        print('💳 ÖDEME: Manuel hesaplama - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
+      }
     
     // setState ile UI güncelle
     setState(() {});
+  }
+  
+  // BEKLEME ÜCRETİ HESAPLAMA
+  double _calculateWaitingFee(int waitingMinutes) {
+    if (waitingMinutes <= _waitingFreeMinutes) {
+      return 0.0; // Ücretsiz dakika içinde
+    }
+    
+    final chargeableMinutes = waitingMinutes - _waitingFreeMinutes;
+    final intervals = (chargeableMinutes / _waitingIntervalMinutes).ceil();
+    final fee = intervals * _waitingFeePerInterval;
+    
+    return fee;
   }
   
   @override
@@ -289,6 +315,10 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   
                   _buildSummaryRow('📍 Nereden', widget.rideDetails['pickup_address'] ?? ''),
                   const SizedBox(height: 8),
+                  
+                  // ARA DURAKLAR
+                  ..._buildWaypointsSummary(),
+                  
                   _buildSummaryRow('🎯 Nereye', widget.rideDetails['destination_address'] ?? ''),
                   const SizedBox(height: 8),
                   _buildSummaryRow('📏 Mesafe', '${_distance.toStringAsFixed(1)} km'),
@@ -629,16 +659,16 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     );
   }
   
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryRow(String label, String value, {Color? color}) {
     return Row(
       children: [
         SizedBox(
           width: 100,
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: Colors.grey,
+              color: color ?? Colors.grey,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -646,9 +676,10 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ),
@@ -1680,6 +1711,82 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         ],
       ),
     );
+  }
+
+  // ARA DURAKLAR ÖZET OLUŞTUR
+  List<Widget> _buildWaypointsSummary() {
+    try {
+      final waypointsJson = widget.rideStatus['waypoints'] ?? widget.rideDetails['waypoints'];
+      
+      if (waypointsJson == null || waypointsJson.toString().isEmpty || waypointsJson.toString() == 'null') {
+        return [];
+      }
+      
+      List<dynamic> waypoints = [];
+      if (waypointsJson is String) {
+        waypoints = jsonDecode(waypointsJson);
+      } else if (waypointsJson is List) {
+        waypoints = waypointsJson;
+      }
+      
+      if (waypoints.isEmpty) {
+        return [];
+      }
+      
+      List<Widget> waypointWidgets = [];
+      for (int i = 0; i < waypoints.length; i++) {
+        final waypoint = waypoints[i];
+        final address = waypoint['address'] ?? waypoint['adres'] ?? waypoint['name'] ?? 'Ara Durak ${i + 1}';
+        
+        waypointWidgets.add(
+          _buildSummaryRow('🛣️ Ara Durak ${i + 1}', address, color: Colors.orange),
+        );
+        waypointWidgets.add(const SizedBox(height: 8));
+      }
+      
+      return waypointWidgets;
+    } catch (e) {
+      print('⚠️ Waypoints parse hatası (ödeme ekranı): $e');
+      return [];
+    }
+  }
+
+  // ARA DURAKLAR ÖZET OLUŞTUR
+  List<Widget> _buildWaypointsSummary() {
+    try {
+      final waypointsJson = widget.rideStatus['waypoints'] ?? widget.rideDetails['waypoints'];
+      
+      if (waypointsJson == null || waypointsJson.toString().isEmpty || waypointsJson.toString() == 'null') {
+        return [];
+      }
+      
+      List<dynamic> waypoints = [];
+      if (waypointsJson is String) {
+        waypoints = jsonDecode(waypointsJson);
+      } else if (waypointsJson is List) {
+        waypoints = waypointsJson;
+      }
+      
+      if (waypoints.isEmpty) {
+        return [];
+      }
+      
+      List<Widget> waypointWidgets = [];
+      for (int i = 0; i < waypoints.length; i++) {
+        final waypoint = waypoints[i];
+        final address = waypoint['address'] ?? waypoint['adres'] ?? waypoint['name'] ?? 'Ara Durak ${i + 1}';
+        
+        waypointWidgets.add(
+          _buildSummaryRow('🛣️ Ara Durak ${i + 1}', address, color: Colors.orange),
+        );
+        waypointWidgets.add(const SizedBox(height: 8));
+      }
+      
+      return waypointWidgets;
+    } catch (e) {
+      print('⚠️ Waypoints parse hatası (ödeme ekranı): $e');
+      return [];
+    }
   }
 
   @override

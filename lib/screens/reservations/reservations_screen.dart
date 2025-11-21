@@ -1448,6 +1448,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     '🗺️ Rota Detayları',
                     [
                       'Nereden: ${ride['pickup_address'] ?? 'Belirtilmemiş'}',
+                      ..._parseWaypoints(ride['waypoints']),
                       'Nereye: ${ride['destination_address'] ?? 'Belirtilmemiş'}',
                       'Mesafe: ${distance > 0 ? '${distance.toStringAsFixed(1)} km' : 'Bilinmiyor'}',
                     ],
@@ -1742,6 +1743,38 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         ),
       ],
     );
+  }
+
+  // ARA DURAKLAR PARSE ET
+  List<String> _parseWaypoints(dynamic waypointsJson) {
+    try {
+      if (waypointsJson == null || waypointsJson.toString().isEmpty || waypointsJson.toString() == 'null') {
+        return [];
+      }
+      
+      List<dynamic> waypoints = [];
+      if (waypointsJson is String) {
+        waypoints = jsonDecode(waypointsJson);
+      } else if (waypointsJson is List) {
+        waypoints = waypointsJson;
+      }
+      
+      if (waypoints.isEmpty) {
+        return [];
+      }
+      
+      List<String> result = [];
+      for (int i = 0; i < waypoints.length; i++) {
+        final waypoint = waypoints[i];
+        final address = waypoint['address'] ?? waypoint['adres'] ?? waypoint['name'] ?? 'Ara Durak ${i + 1}';
+        result.add('🛣️ Ara Durak ${i + 1}: $address');
+      }
+      
+      return result;
+    } catch (e) {
+      print('⚠️ Waypoints parse hatası (geçmiş yolculuklar): $e');
+      return [];
+    }
   }
 
   String _getStatusText(String status) {

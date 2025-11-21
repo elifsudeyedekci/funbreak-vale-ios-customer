@@ -1369,14 +1369,19 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   if (mounted) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) {
+                        // GÜNCEL TUTAR VE TÜM BİLGİLERİ AL - Backend'den!
+                        final currentTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
+                        
+                        // GÜNCEL ride status'ı oluştur - Backend'den gelen TÜM bilgilerle!
+                        final completedRideStatus = Map<String, dynamic>.from(_currentRideStatus);
+                        completedRideStatus['status'] = 'completed';
+                        completedRideStatus['final_price'] = currentTotal > 0 ? currentTotal : (_currentRideStatus['estimated_price'] ?? widget.rideDetails['estimated_price'] ?? 0);
+                        
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => RidePaymentScreen(
                               rideDetails: Map<String, dynamic>.from(widget.rideDetails),
-                              rideStatus: {
-                                'status': 'completed',
-                                'final_price': widget.rideDetails['estimated_price'] ?? 0,
-                              },
+                              rideStatus: completedRideStatus,
                             ),
                           ),
                         );

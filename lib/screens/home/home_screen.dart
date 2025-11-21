@@ -4166,7 +4166,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       print('💰 Estimated Price: ₺${_estimatedPrice ?? 0.0}');
       print('👤 Customer ID: ${authProvider.customerId}');
       print('⏰ Seçilen zaman: $_selectedTimeOption');
-      print('🎯 AKILLI SİSTEM: create_ride_request.php içinde 15sn 10km → 15sn 100km otomatik!');
+      print('🎯 AKILLI SİSTEM: create_ride_request.php içinde 15sn 20km → 15sn 60km otomatik!');
       
       // ZAMAN BAZLI RİDE OLUŞTUR - DETAYLI ZAMAN LOGu!
       DateTime? scheduledDateTime;
@@ -5898,7 +5898,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '100km menzil içindeki çevrimiçi valeler yakından uzağa sıralanmıştır.',
+                        '60km menzil içindeki çevrimiçi valeler yakından uzağa sıralanmıştır.',
                         style: TextStyle(
                           fontSize: 14,
                           color: themeProvider.isDarkMode ? Colors.grey[300] : Colors.grey[700],
@@ -5997,7 +5997,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
       final result = await adminApi.getOnlineDrivers(
         pickupLat: _pickupLocation?.latitude,
         pickupLng: _pickupLocation?.longitude,
-        maxDistance: 100.0, // 100km menzil
+        maxDistance: 60.0, // 60km menzil
       );
       
       print('📊 === SÜRÜCÜ API SONUCU ===');
@@ -7085,7 +7085,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
       final check1 = await _checkRideAccepted(rideId);
       if (check1) return;
       
-      print('⏩ Aşama 2 - 100km...');
+      print('⏩ Aşama 2 - 60km...');
       await _searchDriversStage(rideId, 2);
       await Future.delayed(const Duration(seconds: 15));
       
