@@ -61,6 +61,9 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
   // ✅ SAATLİK PAKET CACHE
   List<Map<String, double>> _cachedHourlyPackages = [];
   
+  // ✅ ARAMA KONTROLÜ (İKİ KEZ ARAMA ENGEL!)
+  bool _isCalling = false;
+  
   // 🗺️ HARİTA KAMERA KONTROLÜ
   bool _isFirstCameraUpdate = true; // İlk açılışta kamera ayarla, sonra SADECE marker güncelle
   
@@ -1155,7 +1158,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               ],
             ),
             child: ElevatedButton(
-              onPressed: () => _callDriverDirectly(),
+              onPressed: _isCalling ? null : () => _callDriverDirectly(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -2078,6 +2081,12 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   // ✅ NETGSM KÖPRÜ ARAMA SİSTEMİ! 🔥
   // ✅ APPLE REVIEW İÇİN GÜVENLİ HALE GETİRİLDİ!
   Future<void> _callDriverDirectly() async {
+    // ✅ İKİ KEZ ARAMA ENGEL!
+    if (_isCalling) {
+      print('⚠️ [MÜŞTERİ] Arama zaten devam ediyor, duplicate engellendi!');
+      return;
+    }
+    
     try {
       // TEST HESAP KONTROLÜ - Apple Review için!
       if (await _isTestAccount()) {
@@ -2249,6 +2258,11 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   
   // ✅ KÖPRÜ ARAMASI BAŞLAT - BACKEND ÜZERİNDEN!
   Future<void> _initiateBridgeCall(int rideId, String driverPhone, String driverName) async {
+    // ✅ FLAG SET ET - ARAMA BAŞLADI!
+    setState(() {
+      _isCalling = true;
+    });
+    
     try {
       // Müşteri numarasını al
       final prefs = await SharedPreferences.getInstance();
@@ -2338,6 +2352,14 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
           ),
         );
       }
+    } finally {
+      // ✅ FLAG RESET - ARAMA BİTTİ!
+      if (mounted) {
+        setState(() {
+          _isCalling = false;
+        });
+      }
+      print('✅ [MÜŞTERİ] Arama flag reset edildi, yeni arama yapılabilir');
     }
   }
 

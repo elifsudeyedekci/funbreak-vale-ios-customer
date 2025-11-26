@@ -675,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               Expanded(
                                 child: _buildServiceTypeButton(
                                   'vale',
-                                  'Vale Çağır',
+                                  'Mesafe Bazlı (KM)',
                                   Icons.directions_car,
                                 ),
                               ),
@@ -793,7 +793,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       ),
                                     )
                                   : const Text(
-                                      'Yolculuğu Onayla',
+                                      'Detay Gör Ve Onayla',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
