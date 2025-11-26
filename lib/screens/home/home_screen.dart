@@ -2067,6 +2067,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           print('🔍 Ride durumu API response: $data');
           print('🔍 Success: ${data['success']}, Status: ${data['status']}');
           
+          // API SUCCESS VE SCHEDULED KONTROLÜ - REZERVASYON OLUŞTURULDU MU?
+          if (data['success'] == true && data['status'] == 'scheduled') {
+            timer.cancel();
+            _driverSearchTimer?.cancel();
+            
+            print('📅 REZERVASYON OLUŞTURULDU! Status: scheduled');
+            
+            // Modal'ı kapat
+            if (modalContext.mounted) {
+              Navigator.of(modalContext).pop();
+            }
+            
+            // Rezervasyon dialogu göster
+            if (mounted) {
+              await Future.delayed(const Duration(milliseconds: 300));
+              _showReservationCreatedDialog(data);
+            }
+            return;
+          }
+          
           // API SUCCESS VE SÜRÜCÜ KABUL KONTROLÜ!
           if (data['success'] == true && (data['status'] == 'accepted' || data['status'] == 'confirmed')) {
             timer.cancel();
