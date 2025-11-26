@@ -1964,9 +1964,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           try {
             print('⏰ 35 saniye doldu - Backend kontrolü yapılıyor...');
             
-            // BACKEND'İN STATUS'ÜNÜ KONTROL ET - İPTAL ETME!
             final prefs = await SharedPreferences.getInstance();
             final customerId = prefs.getString('user_id') ?? '0';
+            
+            // MANUEL BACKEND TIMER ÇAĞRISI - Asenkron CURL çalışmadığı için!
+            print('🔄 Backend timer manuel tetikleniyor - customer_id: $customerId');
+            try {
+              // Customer ID ile son pending ride'ı bul ve timer çalıştır
+              final timerResponse = await http.get(
+                Uri.parse('https://admin.funbreakvale.com/api/trigger_cancel_timer_by_customer.php?customer_id=$customerId'),
+              ).timeout(const Duration(seconds: 5));
+              print('✅ Backend timer tetiklendi: ${timerResponse.body}');
+            } catch (timerError) {
+              print('⚠️ Timer tetikleme hatası: $timerError');
+            }
+            
+            // 2 saniye bekle, backend işlesin
+            await Future.delayed(const Duration(seconds: 2));
+            
+            // ŞİMDİ BACKEND'İN STATUS'ÜNÜ KONTROL ET!
             
             // HTTP ile direkt backend çağrısı
             final response = await http.get(
