@@ -173,32 +173,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         print('🔍 Backend aktif yolculuk response: $data');
         
         if (data['success'] == true && data['active_rides'] != null && data['active_rides'].length > 0) {
-          // SADECE GERÇEK AKTİF YOLCULUKLARI GÖSTER! (completed ve cancelled HARİÇ!)
+          // SADECE VALE KABUL ETTİYSE YOLCULUK EKRANINA GİT!
           final activeRide = data['active_rides'][0];
           final rideStatus = activeRide['status']?.toString() ?? '';
           
-          if (rideStatus == 'completed' || rideStatus == 'cancelled') {
-            print('⏸️ Yolculuk TAMAMLANMIŞ ($rideStatus) - yönlendirme YAPILMAYACAK!');
-            return;
+          // ❌ pending, scheduled, completed, cancelled → YOLCULUK EKRANI AÇILMAMALI!
+          // ✅ SADECE accepted veya in_progress → YOLCULUK EKRANI AÇILMALI!
+          if (rideStatus == 'accepted' || rideStatus == 'in_progress') {
+            print('✅ Vale KABUL ETTİ ($rideStatus) - yolculuk ekranı açılıyor');
+            
+            // Otomatik yolculuk ekranına git
+            Navigator.pushNamed(context, '/modern_active_ride', arguments: {
+              'rideDetails': activeRide,
+              'isFromBackend': true,
+            });
+          } else if (rideStatus == 'scheduled' || rideStatus == 'pending') {
+            print('📅 Bekleyen yolculuk ($rideStatus) - Yolculuk ekranı AÇILMAYACAK!');
+            // Yolculuk ekranı açılmaz - kullanıcı rezervasyonlardan görebilir
+          } else {
+            print('⏸️ Yolculuk durumu: $rideStatus - yönlendirme YAPILMAYACAK!');
           }
-          
-          print('✅ Backend aktif yolculuk bulundu - otomatik yolculuk ekranı açılıyor');
-          
-          // Otomatik yolculuk ekranına git
-          Navigator.pushNamed(context, '/modern_active_ride', arguments: {
-            'rideDetails': activeRide,
-            'isFromBackend': true,
-          });
         } else {
           print('ℹ️ Backend aktif yolculuk bulunamadı');
         }
-      } else {
-        print('❌ Backend aktif yolculuk API hatası: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Backend aktif yolculuk kontrol hatası: $e');
-    }
-  }
   
   // Badge sayısını yenile
   Future<void> _refreshBadgeCount() async {
@@ -2350,10 +2347,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () async {
                   print('📞 Şirket aranıyor...');
                   try {
-                    final uri = 'tel:05334488253';
-                    if (await canLaunch(uri)) {
-                      await launch(uri);
+                    final phoneUri = Uri.parse('tel:05334488253');
+                    if (await canLaunchUrl(phoneUri)) {
+                      await launchUrl(phoneUri);
                       Navigator.of(context).pop();
+                    } else {
+                      print('❌ Telefon araması başlatılamadı');
                     }
                   } catch (e) {
                     print('❌ Arama hatası: $e');
