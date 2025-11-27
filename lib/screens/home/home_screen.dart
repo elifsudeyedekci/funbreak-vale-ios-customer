@@ -40,6 +40,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -2350,19 +2351,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     final uri = Uri(scheme: 'tel', path: '05334488253');
                     await launchUrl(uri);
                     Navigator.of(context).pop();
-                    // Direkt ReservationsScreen'e git
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const ReservationsScreen(),
-                      ),
-                    );
+                    // Ana sayfa stack'ini temizle ve MainScreen'e dön
+                    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
                   } catch (e) {
                     print('❌ Arama hatası: $e');
                   }
                 },
               ),
               const SizedBox(width: 8),
-              // TAMAM BUTONU - REZERVASYONLAR EKRANINA YÖNLENDİR
+              // TAMAM BUTONU - REZERVASYONLAR TABINA GEÇ
               ElevatedButton.icon(
                 icon: const Icon(Icons.check, color: Colors.white, size: 20),
                 label: const Text('Tamam', style: TextStyle(color: Colors.white)),
@@ -2371,14 +2368,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 onPressed: () {
-                  print('✅ Tamam - Rezervasyonlar ekranına yönlendiriliyor');
+                  print('✅ Tamam - Ana sayfaya dönülüyor');
                   Navigator.of(context).pop();
-                  // Direkt ReservationsScreen'e git
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const ReservationsScreen(),
-                    ),
-                  );
+                  // Ana sayfa stack'ini temizle ve MainScreen'e dön
+                  // Not: Bu sayede alt menü korunur ve rezervasyon görünür olur
+                  Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
                 },
               ),
             ],
