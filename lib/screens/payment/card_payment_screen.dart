@@ -704,10 +704,10 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
                 onPageFinished: (url) {
                   print('✅ 3D Secure sayfa yüklendi: $url');
                   
-                  // Callback sayfası yüklendiyse 3 saniye bekle ve başarı dialog'u aç
+                  // Callback sayfası yüklendiyse 1 saniye bekle ve başarı dialog'u aç
                   if (url.contains('payment_callback.php?status=success')) {
-                    print('🕐 CALLBACK BAŞARILI - 3 saniye sonra dialog açılacak');
-                    Future.delayed(Duration(seconds: 3), () {
+                    print('🕐 CALLBACK BAŞARILI - 1 saniye sonra dialog açılacak');
+                    Future.delayed(Duration(seconds: 1), () {
                       if (mounted && _showWebView) {
                         print('🎉 TIMEOUT - Başarı dialog açılıyor');
                         setState(() {

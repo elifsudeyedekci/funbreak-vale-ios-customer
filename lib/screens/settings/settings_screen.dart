@@ -10,6 +10,7 @@ import '../payment/payment_methods_screen.dart';
 import '../profile/profile_screen.dart';
 // import '../security/security_center_screen.dart'; // KALDIRILDI - Şifre girişi yok
 import '../../providers/language_provider.dart';
+import 'price_list_screen.dart';
 import '../../services/dynamic_contact_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -176,6 +177,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const PaymentMethodsScreen(),
+                  ),
+                );
+              },
+            ),
+            _buildSettingTile(
+              icon: Icons.price_check,
+              title: 'Fiyat Listesi',
+              subtitle: 'Vale hizmet fiyatlarını görün',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PriceListScreen(),
                   ),
                 );
               },

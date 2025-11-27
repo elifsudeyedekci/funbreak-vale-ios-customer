@@ -840,6 +840,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     final hasDiscount = discountCode.isNotEmpty && discountAmount > 0;
     final originalPrice = hasDiscount ? ridePrice + discountAmount : ridePrice;
     
+    // 🗺️ Özel konum bilgisi
+    final specialLocation = ride['special_location'];
+    final hasSpecialLocation = specialLocation != null && specialLocation['fee'] != null && (specialLocation['fee'] as num) > 0;
+    final specialLocationFee = hasSpecialLocation ? (specialLocation['fee'] as num).toDouble() : 0.0;
+    final specialLocationName = hasSpecialLocation ? (specialLocation['name']?.toString() ?? 'Özel Bölge') : '';
+    
     // 🔍 DEBUG
     if (ride['id'].toString() == '487' || ride['id'].toString() == '488') {
       print('🎁 MÜŞTERİ GEÇMİŞ #${ride['id']}: discount_code=$discountCode, discount_amount=$discountAmount, hasDiscount=$hasDiscount');
@@ -985,6 +991,24 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                      if (hasSpecialLocation) ...[
+                        Text(
+                          '🗺️ $specialLocationName',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.blue[400],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '+₺${specialLocationFee.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.blue[400],
                             fontWeight: FontWeight.bold,
                           ),
                         ),

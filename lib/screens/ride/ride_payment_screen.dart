@@ -56,9 +56,15 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
   // SAATLİK PAKET BİLGİSİ
   String _hourlyPackageLabel = '';
   
+  // ÖZEL KONUM BİLGİSİ
+  Map<String, dynamic>? _specialLocation;
+  
   @override
   void initState() {
     super.initState();
+    
+    // ✅ ÖZEL KONUM BİLGİSİ AL (varsa)
+    _specialLocation = widget.rideStatus?['special_location'] ?? widget.rideDetails?['special_location'];
     
     // ÖNCELİKLE ride status'tan verileri al
     _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
@@ -602,6 +608,31 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                             child: Text(
                               '✅ İndirim uygulandı: ₺${_discountAmount.toStringAsFixed(2)} indirim!',
                               style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  // 🗺️ ÖZEL KONUM BİLGİSİ (varsa)
+                  if (_specialLocation != null && (_specialLocation!['fee'] as num?) != null && (_specialLocation!['fee'] as num) > 0) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '🗺️ ${_specialLocation!['name'] ?? 'Özel Bölge'}: +₺${((_specialLocation!['fee'] as num).toDouble()).toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
