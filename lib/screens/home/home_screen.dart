@@ -2350,6 +2350,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     final uri = Uri(scheme: 'tel', path: '05334488253');
                     await launchUrl(uri);
                     Navigator.of(context).pop();
+                    // Direkt ReservationsScreen'e git
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ReservationsScreen(),
+                      ),
+                    );
                   } catch (e) {
                     print('❌ Arama hatası: $e');
                   }
@@ -2367,8 +2373,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () {
                   print('✅ Tamam - Rezervasyonlar ekranına yönlendiriliyor');
                   Navigator.of(context).pop();
-                  // Rezervasyonlar ekranına yönlendir (MainScreen tab index 1)
-                  Navigator.of(context).pushReplacementNamed('/reservations');
+                  // Direkt ReservationsScreen'e git
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ReservationsScreen(),
+                    ),
+                  );
                 },
               ),
             ],
