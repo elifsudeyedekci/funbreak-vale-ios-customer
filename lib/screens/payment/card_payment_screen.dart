@@ -6,7 +6,7 @@ import '../../services/payment_service.dart';
 /// Kart ile Ödeme Ekranı
 /// FunBreak Vale - Müşteri Uygulaması
 ///
-/// @version 1.0.0
+/// @version 1.1.0
 /// @date 2025-11-27
 
 class CardPaymentScreen extends StatefulWidget {
@@ -14,6 +14,8 @@ class CardPaymentScreen extends StatefulWidget {
   final int customerId;
   final double amount;
   final String paymentType; // ride_payment, cancellation_fee
+  final String? savedCardId; // Kayıtlı kart ID (varsa)
+  final Map<String, dynamic>? savedCardData; // Kayıtlı kart bilgileri (varsa)
 
   const CardPaymentScreen({
     Key? key,
@@ -21,6 +23,8 @@ class CardPaymentScreen extends StatefulWidget {
     required this.customerId,
     required this.amount,
     this.paymentType = 'ride_payment',
+    this.savedCardId,
+    this.savedCardData,
   }) : super(key: key);
 
   @override
@@ -39,6 +43,20 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
   bool _showWebView = false;
   String _acsHtml = '';
   String _cardType = 'unknown';
+  
+  // Kayıtlı kart ile ödeme için CVV
+  bool _needsCvvForSavedCard = false;
+  final _savedCardCvvController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Kayıtlı kart varsa, CVV sorulacak
+    if (widget.savedCardId != null && widget.savedCardData != null) {
+      _needsCvvForSavedCard = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -46,6 +64,7 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     _cardHolderController.dispose();
     _expiryController.dispose();
     _cvvController.dispose();
+    _savedCardCvvController.dispose();
     super.dispose();
   }
 
@@ -54,6 +73,62 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     setState(() {
       _cardType = PaymentService.detectCardType(value);
     });
+  }
+
+  /// Kayıtlı kart ile ödeme yap
+  Future<void> _processPaymentWithSavedCard() async {
+    if (_savedCardCvvController.text.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen CVV kodunu giriniz'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      print('💳 Kayıtlı kart ile ödeme başlatılıyor...');
+      print('   Card ID: ${widget.savedCardId}');
+      print('   Ride ID: ${widget.rideId}');
+      print('   Amount: ${widget.amount}');
+
+      final result = await PaymentService.payWithSavedCard(
+        rideId: widget.rideId,
+        customerId: widget.customerId,
+        amount: widget.amount,
+        savedCardId: int.parse(widget.savedCardId!),
+        cvv: _savedCardCvvController.text,
+        paymentType: widget.paymentType,
+      );
+
+      print('📦 Kayıtlı kart ödeme sonucu: ${result['success']}');
+
+      if (result['success'] == true) {
+        if (result['requires_3d'] == true && result['acs_html'] != null) {
+          // 3D Secure sayfasını göster
+          setState(() {
+            _showWebView = true;
+            _acsHtml = result['acs_html'];
+          });
+        } else {
+          // Ödeme tamamlandı
+          _showSuccessDialog();
+        }
+      } else {
+        // Hata mesajını göster
+        _showErrorDialog(result['message'] ?? 'Ödeme başlatılamadı');
+      }
+    } catch (e) {
+      print('❌ Kayıtlı kart ödeme hatası: $e');
+      _showErrorDialog('Bir hata oluştu: $e');
+    } finally {
+      if (mounted && !_showWebView) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _processPayment() async {
@@ -123,6 +198,19 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
       final uri = Uri.parse(url);
       final error = uri.queryParameters['error'] ?? 'Ödeme başarısız';
       _showErrorDialog(Uri.decodeComponent(error));
+    }
+    
+    // Callback URL kontrolü
+    if (url.contains('payment_callback.php')) {
+      final uri = Uri.parse(url);
+      final status = uri.queryParameters['status'];
+      
+      if (status == 'success') {
+        _showSuccessDialog();
+      } else {
+        final message = uri.queryParameters['message'] ?? 'Ödeme başarısız';
+        _showErrorDialog(Uri.decodeComponent(message));
+      }
     }
   }
 
@@ -288,6 +376,281 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     return Icon(icon, color: color, size: 28);
   }
 
+  /// Kayıtlı kart ile ödeme UI
+  Widget _buildSavedCardPaymentUI() {
+    final cardData = widget.savedCardData!;
+    final maskedNumber = cardData['masked_card_number'] ?? cardData['cardNumber'] ?? '**** **** **** ****';
+    final cardHolder = cardData['card_holder'] ?? cardData['cardHolder'] ?? 'Kart Sahibi';
+    final cardBrand = cardData['card_brand'] ?? cardData['cardType'] ?? 'Kart';
+    
+    return Scaffold(
+      backgroundColor: const Color(0xFF111827),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1F2937),
+        title: const Text('Kayıtlı Kart ile Ödeme'),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Tutar kartı
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Ödenecek Tutar',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '₺${widget.amount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (widget.paymentType == 'cancellation_fee')
+                    Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'İptal Ücreti',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Seçili kart bilgisi
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF374151)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 35,
+                        decoration: BoxDecoration(
+                          color: cardBrand.toString().toLowerCase().contains('visa') 
+                              ? const Color(0xFF1A1F71)
+                              : cardBrand.toString().toLowerCase().contains('master')
+                                  ? const Color(0xFFEB001B)
+                                  : const Color(0xFF00A9E0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.credit_card, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              maskedNumber,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              cardHolder.toUpperCase(),
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 24),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // CVV girişi
+            Text(
+              'CVV Kodunu Giriniz',
+              style: TextStyle(color: Colors.grey[400], fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _savedCardCvvController,
+              style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8),
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(4),
+              ],
+              decoration: InputDecoration(
+                hintText: '• • •',
+                hintStyle: TextStyle(color: Colors.grey[600], fontSize: 24),
+                filled: true,
+                fillColor: const Color(0xFF1F2937),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+            Text(
+              'Kartınızın arkasındaki 3 haneli güvenlik kodunu giriniz',
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 30),
+
+            // Güvenlik notu
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF374151)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lock, color: Color(0xFF10B981), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '3D Secure ile Güvenli Ödeme',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Ödemeniz 3D Secure ile güvenli şekilde işlenecektir.',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Ödeme butonu
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF59E0B),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: _isLoading ? null : _processPaymentWithSavedCard,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        '₺${widget.amount.toStringAsFixed(2)} Öde',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Farklı kart kullan
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _needsCvvForSavedCard = false;
+                  });
+                },
+                child: Text(
+                  'Farklı Kart Kullan',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // VakıfBank logosu
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.verified_user, color: Colors.grey[600], size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'VakıfBank Sanal POS ile güvende',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 3D Secure WebView göster
@@ -312,8 +675,21 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
             ..setJavaScriptMode(JavaScriptMode.unrestricted)
             ..setNavigationDelegate(
               NavigationDelegate(
+                onPageStarted: (url) {
+                  print('📄 3D Secure sayfa: $url');
+                },
+                onPageFinished: (url) {
+                  print('✅ 3D Secure sayfa yüklendi: $url');
+                },
                 onNavigationRequest: (request) {
+                  print('🔗 WebView Navigation: ${request.url}');
                   _handleWebViewNavigation(request.url);
+                  
+                  // Deep link'i yakaladıysak navigation'ı engelle
+                  if (request.url.startsWith('funbreakvale://')) {
+                    return NavigationDecision.prevent;
+                  }
+                  
                   return NavigationDecision.navigate;
                 },
               ),
@@ -323,7 +699,12 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
       );
     }
 
-    // Kart bilgi formu
+    // Kayıtlı kart ile ödeme UI
+    if (_needsCvvForSavedCard && widget.savedCardData != null) {
+      return _buildSavedCardPaymentUI();
+    }
+
+    // Yeni kart bilgi formu
     return Scaffold(
       backgroundColor: const Color(0xFF111827),
       appBar: AppBar(
@@ -700,4 +1081,3 @@ class _ExpiryDateFormatter extends TextInputFormatter {
     );
   }
 }
-

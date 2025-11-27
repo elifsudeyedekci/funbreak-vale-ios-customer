@@ -182,21 +182,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // ✅ SADECE accepted veya in_progress → YOLCULUK EKRANI AÇILMALI!
           if (rideStatus == 'accepted' || rideStatus == 'in_progress') {
             print('✅ Vale KABUL ETTİ ($rideStatus) - yolculuk ekranı açılıyor');
-            
-            // Otomatik yolculuk ekranına git
-            Navigator.pushNamed(context, '/modern_active_ride', arguments: {
-              'rideDetails': activeRide,
-              'isFromBackend': true,
-            });
+          
+          // Otomatik yolculuk ekranına git
+          Navigator.pushNamed(context, '/modern_active_ride', arguments: {
+            'rideDetails': activeRide,
+            'isFromBackend': true,
+          });
           } else if (rideStatus == 'scheduled' || rideStatus == 'pending') {
             print('📅 Bekleyen yolculuk ($rideStatus) - Yolculuk ekranı AÇILMAYACAK!');
             // Yolculuk ekranı açılmaz - kullanıcı rezervasyonlardan görebilir
-          } else {
-            print('⏸️ Yolculuk durumu: $rideStatus - yönlendirme YAPILMAYACAK!');
-          }
         } else {
-          print('ℹ️ Backend aktif yolculuk bulunamadı');
+            print('⏸️ Yolculuk durumu: $rideStatus - yönlendirme YAPILMAYACAK!');
         }
+      } else {
+          print('ℹ️ Backend aktif yolculuk bulunamadı');
+  }
   
   // Badge sayısını yenile
   Future<void> _refreshBadgeCount() async {
@@ -1964,9 +1964,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           try {
             print('⏰ 35 saniye doldu - Backend kontrolü yapılıyor...');
             
-            final prefs = await SharedPreferences.getInstance();
-            final customerId = prefs.getString('user_id') ?? '0';
-            
+              final prefs = await SharedPreferences.getInstance();
+              final customerId = prefs.getString('user_id') ?? '0';
+              
             // MANUEL BACKEND TIMER ÇAĞRISI - Asenkron CURL çalışmadığı için!
             print('🔄 Backend timer manuel tetikleniyor - customer_id: $customerId');
             try {
@@ -2004,15 +2004,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 if (status == 'scheduled') {
                   // ✅ BACKEND BAŞARIYLA 'scheduled' YAPMIŞ!
                   print('✅ Rezervasyon oluşturuldu - Status: scheduled');
-                  
-                  // Modal'ı kapat
-                  Navigator.of(modalContext).pop();
-                  
+            
+            // Modal'ı kapat
+            Navigator.of(modalContext).pop();
+            
                   // Rezervasyon oluşturuldu mesajı göster
-                  if (mounted) {
-                    await Future.delayed(const Duration(milliseconds: 500));
+            if (mounted) {
+              await Future.delayed(const Duration(milliseconds: 500));
                     _showReservationCreatedDialog(ride);
-                  }
+            }
                   return;
                 }
               }

@@ -830,6 +830,21 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       final isCancellationFee = widget.rideStatus['is_cancellation_fee'] == true;
       final paymentType = isCancellationFee ? 'cancellation_fee' : 'ride_payment';
       
+      // Kayıtlı kart mı yoksa yeni kart mı?
+      Map<String, dynamic>? selectedCardData;
+      if (_selectedCardId != null && _savedCards.isNotEmpty) {
+        // Seçili kartın bilgilerini bul
+        try {
+          selectedCardData = _savedCards.firstWhere(
+            (c) => c['id']?.toString() == _selectedCardId,
+            orElse: () => {},
+          );
+          if (selectedCardData.isEmpty) selectedCardData = null;
+        } catch (e) {
+          selectedCardData = null;
+        }
+      }
+      
       // 3D Secure ödeme ekranına git
       final result = await Navigator.push<bool>(
         context,
@@ -839,6 +854,8 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
             customerId: int.tryParse(customerId) ?? 0,
             amount: finalAmount,
             paymentType: paymentType,
+            savedCardId: _selectedCardId, // Kayıtlı kart ID (varsa)
+            savedCardData: selectedCardData, // Kayıtlı kart bilgileri (varsa)
           ),
         ),
       );
@@ -1594,17 +1611,14 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                 title: const Text('Yeni Kart Ekle', style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(sheetContext);
+                  // Yeni kart ekle seçildiğinde, savedCardId null olarak CardPaymentScreen açılacak
+                  // Bu sayede kart numarası giriş ekranı gösterilecek
                   if (mounted) {
                     setState(() {
                       _selectedPaymentMethod = 'card';
-                      _selectedCardId = null;
+                      _selectedCardId = null; // Yeni kart = savedCardId yok
                     });
                   }
-                  Future.delayed(const Duration(milliseconds: 250), () {
-                    if (mounted) {
-                      _showAddCardDialog();
-                    }
-                  });
                 },
               ),
               
