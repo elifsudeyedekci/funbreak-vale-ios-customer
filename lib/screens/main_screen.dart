@@ -279,12 +279,12 @@ class _MainScreenState extends State<MainScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), // Azaltıldı - sarı alan yazının içine girmemesin
         decoration: BoxDecoration(
           color: isSelected 
               ? const Color(0xFFFFD700) 
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(20), // Daha küçük border radius
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

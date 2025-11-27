@@ -768,6 +768,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             const SizedBox(height: 8),
                           ],
 
+                          const SizedBox(height: 16), // Ekstra boşluk - buton yukarıda çok bitişik görünmesin
+
                           // TEK ANA BUTON - VALE SEÇ 2. AŞAMAYA TAŞINDI!
                           SizedBox(
                             width: double.infinity,
