@@ -723,9 +723,18 @@ class AdminApiProvider extends ChangeNotifier {
           // Backend'den gelen format: "2025-11-11 22:54:29" veya ISO8601
           final serverTimeStr = data['iso8601'] ?? data['server_time'];
           debugPrint('✅ Server saati alındı: $serverTimeStr');
-          // ⚠️ DOĞRUDAN PARSE ET - toLocal() yapma! 
-          // Backend zaten Türkiye saati gönderiyor, biz de Türkiye saati kullanacağız
-          return DateTime.parse(serverTimeStr);
+          
+          // ⚠️ DateTime.parse() timezone bilgili string'i UTC'ye çeviriyor!
+          // Çözüm: Timezone bilgisini çıkar ve direkt parse et
+          String cleanTimeStr = serverTimeStr;
+          if (cleanTimeStr.contains('+') || cleanTimeStr.contains('Z')) {
+            // "2025-11-27T03:50:09+03:00" -> "2025-11-27T03:50:09"
+            cleanTimeStr = cleanTimeStr.split('+')[0].split('Z')[0];
+          }
+          
+          final parsed = DateTime.parse(cleanTimeStr);
+          debugPrint('🕐 Parsed (Türkiye saati): $parsed');
+          return parsed;
         }
       }
       

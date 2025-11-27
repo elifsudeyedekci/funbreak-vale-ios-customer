@@ -26,9 +26,22 @@ class RideService {
       print('   👤 Customer: $customerId');
       print('   📍 Pickup: $pickupLocation ($pickupLat, $pickupLng)');
       print('   🎯 Destination: $destination ($destinationLat, $destinationLng)');
-      print('   �️  Waypoints: ${waypoints?.length ?? 0} durak');
-      print('   �💰 Price: $estimatedPrice');
+      print('   🛣️  Waypoints: ${waypoints?.length ?? 0} durak');
+      print('   💰 Price: $estimatedPrice');
       print('🔗 API URL: $baseUrl/create_ride_request.php');
+      
+      // ⚠️ scheduledDateTime formatını düzelt - Backend "YYYY-MM-DD HH:MM:SS" bekliyor!
+      String? formattedScheduledTime = scheduledDateTime;
+      if (scheduledDateTime != null && scheduledDateTime.isNotEmpty) {
+        try {
+          // ISO8601 formatından ("2025-11-27T04:50:09.000558Z") -> "2025-11-27 04:50:09"
+          final dt = DateTime.parse(scheduledDateTime);
+          formattedScheduledTime = '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
+          print('📅 Scheduled time formatted: $scheduledDateTime -> $formattedScheduledTime');
+        } catch (e) {
+          print('⚠️ Scheduled time format hatası: $e - Orijinal değer kullanılıyor');
+        }
+      }
       
       final response = await http.post(
         Uri.parse('$baseUrl/create_ride_request.php'),
@@ -43,7 +56,7 @@ class RideService {
           'destination_lat': destinationLat ?? 0.0,
           'destination_lng': destinationLng ?? 0.0,
           'waypoints': waypoints ?? [], // 🔥 ARA DURAKLAR
-          'scheduled_time': scheduledDateTime, // home_screen.dart zaten server time kullanıyor!
+          'scheduled_time': formattedScheduledTime, // ✅ Backend uyumlu format!
           'estimated_price': estimatedPrice ?? 0.0,
           'payment_method': 'card',
           'request_type': requestType,
@@ -180,7 +193,7 @@ class RideService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/cancel_ride_request.php'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json'),
         body: jsonEncode({'ride_id': rideId}),
       );
 
