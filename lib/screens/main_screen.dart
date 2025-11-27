@@ -100,13 +100,14 @@ class _MainScreenState extends State<MainScreen> {
             print('   🆔 Ride ID: ${ride['id']}');
             print('   📊 Status: $rideStatus');
             
-            // SADECE GERÇEK AKTİF YOLCULUKLARI GÖSTER!
-            if (rideStatus == 'completed' || rideStatus == 'cancelled') {
-              print('⏸️ [MÜŞTERİ MAIN] Yolculuk TAMAMLANMIŞ ($rideStatus) - yönlendirme YAPILMAYACAK!');
+            // ❌ pending, scheduled, completed, cancelled → YOLCULUK EKRANI AÇILMAMALI!
+            // ✅ SADECE accepted veya in_progress → YOLCULUK EKRANI AÇILMALI!
+            if (rideStatus != 'accepted' && rideStatus != 'in_progress') {
+              print('📅 [MÜŞTERİ MAIN] Bekleyen/Tamamlanmış yolculuk ($rideStatus) - Yolculuk ekranı AÇILMAYACAK!');
               return;
             }
             
-            print('   🚗 Yolculuk ekranına YÖNLENDİRİLİYOR...');
+            print('   🚗 Vale KABUL ETTİ - Yolculuk ekranına YÖNLENDİRİLİYOR...');
             
             // Otomatik yolculuk ekranına git
             if (mounted) {
