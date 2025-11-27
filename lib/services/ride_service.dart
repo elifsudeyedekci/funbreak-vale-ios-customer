@@ -193,7 +193,7 @@ class RideService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/cancel_ride_request.php'),
-        headers: {'Content-Type': 'application/json'),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'ride_id': rideId}),
       );
 

@@ -196,6 +196,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
       } else {
           print('ℹ️ Backend aktif yolculuk bulunamadı');
+      }
+    }
+    } catch (e) {
+      print('❌ Backend aktif yolculuk kontrolü hatası: $e');
+    }
   }
   
   // Badge sayısını yenile
