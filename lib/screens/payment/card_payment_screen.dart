@@ -200,16 +200,39 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
       _showErrorDialog(Uri.decodeComponent(error));
     }
     
-    // Callback URL kontrolü
+    // Callback URL kontrolü - ANINDA başarı dialog'u aç
     if (url.contains('payment_callback.php')) {
       final uri = Uri.parse(url);
       final status = uri.queryParameters['status'];
       
+      print('🎯 CALLBACK URL YAKALANDI: $status');
+      
       if (status == 'success') {
-        _showSuccessDialog();
+        print('✅ ÖDEME BAŞARILI - Dialog açılıyor');
+        // WebView'i kapat ve başarı dialog'u aç
+        if (mounted) {
+          setState(() {
+            _showWebView = false;
+          });
+          Future.delayed(Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showSuccessDialog();
+            }
+          });
+        }
       } else {
+        print('❌ ÖDEME BAŞARISIZ - Dialog açılıyor');
         final message = uri.queryParameters['message'] ?? 'Ödeme başarısız';
-        _showErrorDialog(Uri.decodeComponent(message));
+        if (mounted) {
+          setState(() {
+            _showWebView = false;
+          });
+          Future.delayed(Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showErrorDialog(Uri.decodeComponent(message));
+            }
+          });
+        }
       }
     }
   }
@@ -680,6 +703,20 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
                 },
                 onPageFinished: (url) {
                   print('✅ 3D Secure sayfa yüklendi: $url');
+                  
+                  // Callback sayfası yüklendiyse 3 saniye bekle ve başarı dialog'u aç
+                  if (url.contains('payment_callback.php?status=success')) {
+                    print('🕐 CALLBACK BAŞARILI - 3 saniye sonra dialog açılacak');
+                    Future.delayed(Duration(seconds: 3), () {
+                      if (mounted && _showWebView) {
+                        print('🎉 TIMEOUT - Başarı dialog açılıyor');
+                        setState(() {
+                          _showWebView = false;
+                        });
+                        _showSuccessDialog();
+                      }
+                    });
+                  }
                 },
                 onNavigationRequest: (request) {
                   print('🔗 WebView Navigation: ${request.url}');
