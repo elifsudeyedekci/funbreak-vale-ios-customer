@@ -8,6 +8,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/admin_api_provider.dart';
 import '../../providers/ride_provider.dart'; // 🔥 RideProvider temizliği için!
 import '../../services/customer_cards_api.dart'; // Kart yönetimi için
+import '../payment/card_payment_screen.dart'; // 💳 VakıfBank 3D Secure ödeme
 
 // MÜŞTERİ ÖDEME VE PUANLAMA EKRANI!
 class RidePaymentScreen extends StatefulWidget {
@@ -819,17 +820,45 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       return;
     }
     
+    final prefs = await SharedPreferences.getInstance();
+    final customerId = prefs.getString('user_id') ?? '0';
+    final finalAmount = _totalPrice - _discountAmount; // İndirim düşülmüş tutar!
+    
+    // 💳 KART ÖDEMESİ - VakıfBank 3D Secure
+    if (_selectedPaymentMethod == 'card') {
+      // İptal ücreti mi yoksa normal ödeme mi?
+      final isCancellationFee = widget.rideStatus['is_cancellation_fee'] == true;
+      final paymentType = isCancellationFee ? 'cancellation_fee' : 'ride_payment';
+      
+      // 3D Secure ödeme ekranına git
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CardPaymentScreen(
+            rideId: int.tryParse(widget.rideDetails['ride_id']?.toString() ?? '0') ?? 0,
+            customerId: int.tryParse(customerId) ?? 0,
+            amount: finalAmount,
+            paymentType: paymentType,
+          ),
+        ),
+      );
+      
+      // 3D Secure ödeme başarılı mı?
+      if (result == true) {
+        // Ödeme başarılı - persistence temizle ve ana sayfaya git
+        await _cleanupAndGoHome();
+      }
+      // result false veya null ise kullanıcı geri döndü, bir şey yapma
+      return;
+    }
+    
+    // 🏦 HAVALE/EFT ÖDEMESİ - Mevcut sistem
     setState(() {
       _isProcessingPayment = true;
     });
     
     try {
       final adminApi = AdminApiProvider();
-      final prefs = await SharedPreferences.getInstance();
-      final customerId = prefs.getString('user_id') ?? '0';
-      
-      // 1. Ödeme işle
-      final finalAmount = _totalPrice - _discountAmount; // İndirim düşülmüş tutar!
       
       print('💳 === ÖDEME İŞLEMİ BAŞLIYOR ===');
       print('👤 Customer ID: $customerId');
@@ -979,6 +1008,58 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         ],
       ),
     );
+  }
+  
+  // 💳 3D SECURE ÖDEME SONRASI TEMİZLİK VE ANA SAYFAYA GİT
+  Future<void> _cleanupAndGoHome() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // RideProvider'ı temizle
+      if (mounted) {
+        final rideProvider = Provider.of<RideProvider>(context, listen: false);
+        rideProvider.clearCurrentRide();
+        print('✅ 3D Secure ödeme sonrası: RideProvider temizlendi');
+      }
+      
+      // Persistence temizle
+      await prefs.remove('customer_current_ride');
+      await prefs.remove('active_ride_id');
+      await prefs.remove('active_ride_status');
+      await prefs.remove('pending_payment_ride_id');
+      await prefs.remove('current_ride_persistence');
+      await prefs.remove('has_active_ride');
+      
+      // Puanlama bilgisini kaydet
+      await prefs.setString('pending_rating_ride_id', widget.rideDetails['ride_id'].toString());
+      await prefs.setString('pending_rating_driver_id', widget.rideDetails['driver_id'].toString());
+      await prefs.setString('pending_rating_driver_name', widget.rideDetails['driver_name'] ?? 'Şoförünüz');
+      await prefs.setString('pending_rating_customer_id', widget.rideDetails['customer_id'].toString());
+      await prefs.setBool('has_pending_rating', true);
+      
+      print('✅ 3D Secure ödeme başarılı - Ana sayfaya yönlendiriliyor');
+      
+      // Başarı mesajı göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Ödeme başarıyla tamamlandı!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      // Ana sayfaya git
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    } catch (e) {
+      print('⚠️ 3D Secure ödeme sonrası temizlik hatası: $e');
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    }
   }
   
   // PUANLAMA HATIRLATMASI KAYDET VE ANA EKRANA GİT

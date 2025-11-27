@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/customer_cards_api.dart';
 
-// ÖDEME YÖNTEMLERİ EKRANI - BACKEND ENTEGRE!
+// ÖDEME YÖNTEMLERİ EKRANI - VakıfBank 3D Secure Entegreli!
+// @version 2.0.0
+// @date 2025-11-27
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({Key? key}) : super(key: key);
 
@@ -134,9 +137,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   // Header
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700),
-                      borderRadius: const BorderRadius.only(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFD700),
+                      borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(16),
                         topRight: Radius.circular(16),
                       ),
@@ -247,7 +250,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         color: themeProvider.isDarkMode ? Colors.grey[700] : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: card['isDefault'] 
+          side: card['isDefault'] == true
               ? const BorderSide(color: Color(0xFFFFD700), width: 2)
               : BorderSide.none,
         ),
@@ -257,17 +260,17 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _getCardColor(card['cardType']),
+              color: _getCardColor(card['cardType'] ?? 'unknown'),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              _getCardIcon(card['cardType']),
+              _getCardIcon(card['cardType'] ?? 'unknown'),
               color: Colors.white,
               size: 20,
             ),
           ),
           title: Text(
-            card['cardNumber'],
+            card['cardNumber'] ?? '**** **** **** ****',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -278,7 +281,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                card['cardHolder'],
+                card['cardHolder'] ?? '',
                 style: TextStyle(
                   fontSize: 14,
                   color: themeProvider.isDarkMode ? Colors.grey[300] : Colors.grey[600],
@@ -288,13 +291,13 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               Row(
                 children: [
                   Text(
-                    'Son Kullanma: ${card['expiryDate']}',
+                    'Son Kullanma: ${card['expiryDate'] ?? 'N/A'}',
                     style: TextStyle(
                       fontSize: 12,
                       color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[500],
                     ),
                   ),
-                  if (card['isDefault']) ...[
+                  if (card['isDefault'] == true) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -322,7 +325,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600],
             ),
             itemBuilder: (context) => [
-              if (!card['isDefault'])
+              if (card['isDefault'] != true)
                 const PopupMenuItem(
                   value: 'default',
                   child: Row(
@@ -363,7 +366,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     }
   }
 
-  // VARSAYILAN KART YAPMA - BACKEND ÇAĞRISI
+  // VARSAYILAN KART YAPMA
   void _setDefaultCard(Map<String, dynamic> card) async {
     final success = await _cardsApi.updateCard(
       cardId: card['id'],
@@ -371,14 +374,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
     
     if (success) {
-      setState(() {
-        // Tüm kartların varsayılan durumunu kaldır
-        for (var c in _savedCards) {
-          c['isDefault'] = false;
-        }
-        // Seçilen kartı varsayılan yap
-        card['isDefault'] = true;
-      });
+      _loadCards(); // Kartları yenile
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,8 +384,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           ),
         );
       }
-      
-      print('✅ Varsayılan kart değiştirildi: ${card['cardNumber']}');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -402,13 +396,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     }
   }
 
-  // KART DÜZENLEME
-  void _editCard(Map<String, dynamic> card) {
-    print('✏️ Kart düzenleniyor: ${card['cardNumber']}');
-    _showAddCardDialog(editingCard: card);
-  }
-
-  // KART SİLME - BACKEND ÇAĞRISI
+  // KART SİLME
   void _deleteCard(Map<String, dynamic> card) {
     showDialog(
       context: context,
@@ -427,9 +415,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               final success = await _cardsApi.deleteCard(card['id']);
               
               if (success) {
-                setState(() {
-                  _savedCards.remove(card);
-                });
+                _loadCards(); // Kartları yenile
                 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -439,8 +425,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     ),
                   );
                 }
-                
-                print('🗑️ Kart silindi: ${card['cardNumber']}');
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -467,11 +451,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     final expiryController = TextEditingController();
     final cvvController = TextEditingController();
     
-    // Eğer düzenleme modundaysa mevcut bilgileri doldur
     if (editingCard != null) {
-      cardHolderController.text = editingCard['cardHolder'];
-      expiryController.text = editingCard['expiryDate'];
-      // Kart numarası güvenlik nedeniyle düzenlenemez
+      cardHolderController.text = editingCard['cardHolder'] ?? '';
+      expiryController.text = editingCard['expiryDate'] ?? '';
     }
 
     showDialog(
@@ -482,7 +464,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // KART NUMARASI
               if (editingCard == null) ...[
                 TextField(
                   controller: cardNumberController,
@@ -502,7 +483,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 const SizedBox(height: 16),
               ],
               
-              // KART SAHİBİ
               TextField(
                 controller: cardHolderController,
                 decoration: const InputDecoration(
@@ -515,7 +495,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               ),
               const SizedBox(height: 16),
               
-              // SON KULLANMA TARİHİ VE CVV
               Row(
                 children: [
                   Expanded(
@@ -560,24 +539,40 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               
               const SizedBox(height: 16),
               
-              // GÜVENLİK BİLGİSİ
+              // GÜVENLİK BİLGİSİ - 3D Secure
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.security, color: Colors.green, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Kart bilgileriniz güvenli şekilde şifrelenerek saklanır',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green[700],
+                    Row(
+                      children: [
+                        const Icon(Icons.verified_user, color: Colors.green, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          '3D Secure ile Korumalı',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '• Kartınız VakıfBank 3D Secure ile doğrulanır\n'
+                      '• 0.01 ₺ doğrulama ücreti çekilir ve anında iade edilir\n'
+                      '• Kart bilgileriniz AES-256 ile şifrelenir',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green[600],
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -609,10 +604,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
   }
 
-  // KART KAYDETME - BACKEND ÇAĞRISI
+  // KART KAYDETME - VakıfBank 3D Secure ile Doğrulama
   void _saveCard(Map<String, dynamic>? editingCard, String cardNumber, String cardHolder, String expiry, String cvv) async {
-    // Basit validasyon
-    if (editingCard == null && cardNumber.length < 16) {
+    if (editingCard == null && cardNumber.replaceAll(' ', '').length < 16) {
       _showError('Geçerli bir kart numarası girin');
       return;
     }
@@ -632,37 +626,35 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       return;
     }
 
-    // KART KAYDETME/GÜNCELLEME
     if (editingCard != null) {
-      // Düzenleme modu - BACKEND
-      final success = await _cardsApi.updateCard(
-        cardId: editingCard['id'],
-        cardHolder: cardHolder.toUpperCase(),
-      );
-      
-      if (success) {
-        setState(() {
-          editingCard['cardHolder'] = cardHolder.toUpperCase();
-        });
-        
-        print('✅ Kart güncellendi: ${editingCard['cardNumber']}');
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kart bilgileri güncellendi'),
-              backgroundColor: Colors.blue,
+      Navigator.pop(context);
+      return;
+    }
+    
+    Navigator.pop(context);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Color(0xFFFFD700)),
+            const SizedBox(height: 16),
+            const Text('Kart doğrulanıyor...'),
+            const SizedBox(height: 8),
+            Text(
+              '0.01 ₺ doğrulama ücreti çekilecek ve hemen iade edilecek',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
-          );
-        }
-      } else {
-        if (mounted) {
-          _showError('Kart güncellenemedi');
-        }
-        return;
-      }
-    } else {
-      // Yeni kart ekleme - BACKEND
+          ],
+        ),
+      ),
+    );
+    
+    try {
       final result = await _cardsApi.addCard(
         cardNumber: cardNumber,
         cardHolder: cardHolder.toUpperCase(),
@@ -670,83 +662,120 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         cvv: cvv,
       );
       
-      if (result != null && result['success'] == true && result['card'] != null) {
-        final newCard = result['card'];
-        
-        setState(() {
-          _savedCards.add(newCard);
-        });
-        
-        print('✅ Yeni kart eklendi: ${newCard['cardNumber']}');
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Yeni kart başarıyla eklendi'),
-              backgroundColor: Colors.green,
-            ),
-          );
+      if (mounted) Navigator.pop(context);
+      
+      if (result != null && result['success'] == true) {
+        if (result['requires_3d'] == true && result['acs_html'] != null) {
+          _show3DSecureWebView(result['acs_html']);
+        } else {
+          _loadCards();
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ Kart başarıyla doğrulandı ve kaydedildi'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         }
       } else {
         if (mounted) {
-          _showError('Kart eklenemedi');
+          _showError(result?['message'] ?? 'Kart doğrulanamadı');
         }
-        return;
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        _showError('Bir hata oluştu: $e');
       }
     }
-
-    Navigator.pop(context);
   }
-
-  // HATA GÖSTERME
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
+  
+  // 3D SECURE WEBVIEW GÖSTER
+  void _show3DSecureWebView(String acsHtml) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Kart Doğrulama'),
+            backgroundColor: const Color(0xFFFFD700),
+            foregroundColor: Colors.black,
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Kart doğrulama iptal edildi'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              },
+            ),
+          ),
+          body: WebViewWidget(
+            controller: WebViewController()
+              ..setJavaScriptMode(JavaScriptMode.unrestricted)
+              ..setNavigationDelegate(
+                NavigationDelegate(
+                  onNavigationRequest: (request) {
+                    if (request.url.contains('funbreakvale://') || 
+                        request.url.contains('card_verification_callback.php')) {
+                      Navigator.pop(context);
+                      _loadCards();
+                      
+                      if (request.url.contains('success=true')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ Kart başarıyla doğrulandı ve kaydedildi!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('❌ Kart doğrulanamadı'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      
+                      return NavigationDecision.prevent;
+                    }
+                    return NavigationDecision.navigate;
+                  },
+                ),
+              )
+              ..loadHtmlString(acsHtml),
+          ),
+        ),
       ),
     );
   }
 
-  // KART TİPİ ALGILA
-  String _detectCardType(String cardNumber) {
-    final number = cardNumber.replaceAll(' ', '');
-    
-    if (number.startsWith('4')) return 'visa';
-    if (number.startsWith('5') || number.startsWith('2')) return 'mastercard';
-    if (number.startsWith('3')) return 'amex';
-    
-    return 'unknown';
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
-  // KART RENGİ
   Color _getCardColor(String cardType) {
     switch (cardType) {
-      case 'visa':
-        return Colors.blue;
-      case 'mastercard':
-        return Colors.red;
-      case 'amex':
-        return Colors.green;
-      default:
-        return Colors.grey;
+      case 'visa': return Colors.blue;
+      case 'mastercard': return Colors.red;
+      case 'amex': return Colors.green;
+      case 'troy': return Colors.purple;
+      default: return Colors.grey;
     }
   }
 
-  // KART İKONU
   IconData _getCardIcon(String cardType) {
-    switch (cardType) {
-      case 'visa':
-      case 'mastercard':
-      case 'amex':
-        return Icons.credit_card;
-      default:
-        return Icons.payment;
-    }
+    return Icons.credit_card;
   }
 }
 
-// KART NUMARASI FORMATLAYICI
 class _CardNumberInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -754,9 +783,7 @@ class _CardNumberInputFormatter extends TextInputFormatter {
     final buffer = StringBuffer();
     
     for (int i = 0; i < text.length; i++) {
-      if (i % 4 == 0 && i != 0) {
-        buffer.write(' ');
-      }
+      if (i % 4 == 0 && i != 0) buffer.write(' ');
       buffer.write(text[i]);
     }
     
@@ -767,7 +794,6 @@ class _CardNumberInputFormatter extends TextInputFormatter {
   }
 }
 
-// SON KULLANMA TARİHİ FORMATLAYICI
 class _ExpiryDateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -775,9 +801,7 @@ class _ExpiryDateInputFormatter extends TextInputFormatter {
     final buffer = StringBuffer();
     
     for (int i = 0; i < text.length && i < 4; i++) {
-      if (i == 2) {
-        buffer.write('/');
-      }
+      if (i == 2) buffer.write('/');
       buffer.write(text[i]);
     }
     

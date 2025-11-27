@@ -2,42 +2,54 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// CUSTOMER CARDS API - Kayıtlı Kart Yönetimi
+/// CUSTOMER CARDS API - YENİ VakıfBank Entegreli Kayıtlı Kart Yönetimi
+/// 
+/// Özellikler:
+/// - 0.01 TL doğrulama ile kart kaydetme
+/// - VakıfBank 3D Secure entegrasyonu
+/// - Kayıtlı kartla ödeme yapma
+/// 
+/// @version 2.0.0
+/// @date 2025-11-27
 class CustomerCardsApi {
-  static const String baseUrl = 'https://admin.funbreakvale.com/api';
+  static const String baseUrl = 'https://admin.funbreakvale.com/api/payment';
   
-  // ==================== GET CARDS ====================
+  // Customer ID'yi SharedPreferences'tan al
+  Future<int?> _getCustomerId() async {
+    final prefs = await SharedPreferences.getInstance();
+    int? customerId;
+    
+    // 1. İlk önce STRING olarak dene (admin_user_id STRING olarak kayıtlı!)
+    final customerIdStr = prefs.getString('admin_user_id') ??  
+                          prefs.getString('customer_id') ?? 
+                          prefs.getString('user_id');
+    
+    if (customerIdStr != null && customerIdStr.isNotEmpty) {
+      customerId = int.tryParse(customerIdStr);
+    }
+    
+    // 2. Bulunamadıysa INT olarak dene
+    if (customerId == null) {
+      customerId = prefs.getInt('customer_id') ?? prefs.getInt('user_id');
+    }
+    
+    return customerId;
+  }
+  
+  // ==================== GET CARDS - YENİ API ====================
   Future<List<Map<String, dynamic>>> getCards() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Customer ID'yi farklı kaynaklardan al - STRING ÖNCE!
-      int? customerId;
-      
-      // 1. İlk önce STRING olarak dene (admin_user_id STRING olarak kayıtlı!)
-      final customerIdStr = prefs.getString('admin_user_id') ??  
-                            prefs.getString('customer_id') ?? 
-                            prefs.getString('user_id');
-      
-      if (customerIdStr != null && customerIdStr.isNotEmpty) {
-        customerId = int.tryParse(customerIdStr);
-      }
-      
-      // 2. Bulunamadıysa INT olarak dene
-      if (customerId == null) {
-        customerId = prefs.getInt('customer_id') ?? prefs.getInt('user_id');
-      }
+      final customerId = await _getCustomerId();
       
       if (customerId == null) {
         print('❌ Customer ID bulunamadı');
-        print('🔍 Session keys: ${prefs.getKeys()}');
         return [];
       }
       
       print('📋 Kartlar çekiliyor - Customer ID: $customerId');
       
       final response = await http.get(
-        Uri.parse('$baseUrl/customer_cards.php?customer_id=$customerId'),
+        Uri.parse('$baseUrl/get_saved_cards.php?customer_id=$customerId'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10));
       
@@ -46,9 +58,27 @@ class CustomerCardsApi {
         
         if (data['success'] == true) {
           final List<dynamic> cardsJson = data['cards'] ?? [];
-          final List<Map<String, dynamic>> cards = cardsJson
-              .map((card) => Map<String, dynamic>.from(card))
-              .toList();
+          
+          // Yeni formatı eski formata dönüştür (geriye uyumluluk)
+          final List<Map<String, dynamic>> cards = cardsJson.map((card) {
+            return {
+              'id': card['id'],
+              'cardNumber': card['masked_card_number'] ?? '**** **** **** ${card['card_last_four']}',
+              'cardHolder': card['card_holder'],
+              'expiryDate': card['expiry_formatted'] ?? '${card['expiry_month']}/${card['expiry_year']?.toString().substring(2)}',
+              'cardType': card['card_brand']?.toString().toLowerCase() ?? 'unknown',
+              'isDefault': card['is_default'] == true,
+              'isVerified': card['is_verified'] == true,
+              'isExpired': card['is_expired'] == true,
+              'cardAlias': card['card_alias'],
+              'lastUsedAt': card['last_used_at'],
+              'addedDate': card['created_at'],
+              // Yeni alanlar
+              'card_id': card['id'], // Yeni sistem için
+              'card_last_four': card['card_last_four'],
+              'card_first_six': card['card_first_six'],
+            };
+          }).toList();
           
           print('✅ ${cards.length} kart çekildi');
           return cards;
@@ -66,74 +96,82 @@ class CustomerCardsApi {
     }
   }
   
-  // ==================== ADD CARD ====================
+  // ==================== ADD CARD - YENİ 3D SECURE DOĞRULAMA ====================
+  /// Kart doğrulama başlatır (0.01 TL çekip iade eder)
+  /// 
+  /// Returns:
+  /// - success: true/false
+  /// - requires_3d: true ise 3D Secure gerekli
+  /// - acs_html: 3D Secure HTML (WebView'da gösterilecek)
+  /// - verification_id: Doğrulama ID
+  /// - message: Mesaj
   Future<Map<String, dynamic>?> addCard({
     required String cardNumber,
     required String cardHolder,
     required String expiryDate,
     required String cvv,
+    String cardAlias = '',
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Customer ID'yi farklı kaynaklardan al - STRING ÖNCE!
-      int? customerId;
-      
-      // 1. İlk önce STRING olarak dene (admin_user_id STRING olarak kayıtlı!)
-      final customerIdStr = prefs.getString('admin_user_id') ??  
-                            prefs.getString('customer_id') ?? 
-                            prefs.getString('user_id');
-      
-      if (customerIdStr != null && customerIdStr.isNotEmpty) {
-        customerId = int.tryParse(customerIdStr);
-      }
-      
-      // 2. Bulunamadıysa INT olarak dene
-      if (customerId == null) {
-        customerId = prefs.getInt('customer_id') ?? prefs.getInt('user_id');
-      }
+      final customerId = await _getCustomerId();
       
       if (customerId == null) {
         print('❌ Customer ID bulunamadı');
-        print('🔍 Session keys: ${prefs.getKeys()}');
         return null;
       }
       
-      print('💳 Yeni kart ekleniyor - Customer ID: $customerId');
+      print('💳 Yeni kart doğrulama başlatılıyor - Customer ID: $customerId');
+      
+      // Expiry formatını ayır (MM/YY -> month, year)
+      String expiryMonth = '';
+      String expiryYear = '';
+      
+      if (expiryDate.contains('/')) {
+        final parts = expiryDate.split('/');
+        expiryMonth = parts[0].padLeft(2, '0');
+        expiryYear = parts.length > 1 ? '20${parts[1]}' : '';
+      }
       
       final requestBody = {
         'customer_id': customerId,
-        'cardNumber': cardNumber,
-        'cardHolder': cardHolder,
-        'expiryDate': expiryDate,
+        'card_number': cardNumber.replaceAll(' ', ''),
+        'card_holder': cardHolder.toUpperCase(),
+        'expiry_month': expiryMonth,
+        'expiry_year': expiryYear,
         'cvv': cvv,
+        'card_alias': cardAlias,
       };
       
-      print('📤 Request body: ${json.encode(requestBody)}');
+      print('📤 Request body: ${json.encode({...requestBody, 'card_number': '****', 'cvv': '***'})}');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/customer_cards.php'),
+        Uri.parse('$baseUrl/verify_and_save_card.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestBody),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 60));
       
       print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
         if (data['success'] == true) {
-          print('✅ Kart eklendi: ${data['card']['cardNumber']}');
-          // Tüm response'u döndür (success dahil)
+          print('✅ Kart doğrulama başlatıldı');
+          
           return {
             'success': true,
-            'card': data['card'],
-            'message': data['message'],
+            'requires_3d': data['requires_3d'] ?? false,
+            'acs_html': data['acs_html'],
+            'verification_id': data['verification_id'],
+            'transaction_id': data['transaction_id'],
+            'message': data['message'] ?? 'Doğrulama başlatıldı',
           };
         } else {
           print('❌ API hatası: ${data['message']}');
-          return null;
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Kart doğrulanamadı',
+          };
         }
       } else {
         print('❌ HTTP hatası: ${response.statusCode}');
@@ -145,31 +183,14 @@ class CustomerCardsApi {
     }
   }
   
-  // ==================== UPDATE CARD ====================
+  // ==================== UPDATE CARD (VARSAYILAN YAPMA) ====================
   Future<bool> updateCard({
     required int cardId,
     String? cardHolder,
     bool? setDefault,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Customer ID'yi farklı kaynaklardan al - STRING ÖNCE!
-      int? customerId;
-      
-      // 1. İlk önce STRING olarak dene (admin_user_id STRING olarak kayıtlı!)
-      final customerIdStr = prefs.getString('admin_user_id') ??  
-                            prefs.getString('customer_id') ?? 
-                            prefs.getString('user_id');
-      
-      if (customerIdStr != null && customerIdStr.isNotEmpty) {
-        customerId = int.tryParse(customerIdStr);
-      }
-      
-      // 2. Bulunamadıysa INT olarak dene
-      if (customerId == null) {
-        customerId = prefs.getInt('customer_id') ?? prefs.getInt('user_id');
-      }
+      final customerId = await _getCustomerId();
       
       if (customerId == null) {
         print('❌ Customer ID bulunamadı');
@@ -178,38 +199,36 @@ class CustomerCardsApi {
       
       print('🔄 Kart güncelleniyor - Card ID: $cardId');
       
-      final body = <String, dynamic>{
-        'customer_id': customerId,
-        'cardId': cardId,
-      };
-      
       if (setDefault == true) {
-        body['action'] = 'set_default';
-      } else if (cardHolder != null) {
-        body['action'] = 'update';
-        body['cardHolder'] = cardHolder;
-      }
-      
-      final response = await http.put(
-        Uri.parse('$baseUrl/customer_cards.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
-      ).timeout(const Duration(seconds: 10));
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        // Varsayılan kartı ayarla
+        final response = await http.post(
+          Uri.parse('$baseUrl/set_default_card.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'customer_id': customerId,
+            'card_id': cardId,
+          }),
+        ).timeout(const Duration(seconds: 10));
         
-        if (data['success'] == true) {
-          print('✅ Kart güncellendi');
-          return true;
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          
+          if (data['success'] == true) {
+            print('✅ Varsayılan kart ayarlandı');
+            return true;
+          } else {
+            print('❌ API hatası: ${data['message']}');
+            return false;
+          }
         } else {
-          print('❌ API hatası: ${data['message']}');
+          print('❌ HTTP hatası: ${response.statusCode}');
           return false;
         }
-      } else {
-        print('❌ HTTP hatası: ${response.statusCode}');
-        return false;
       }
+      
+      // Kart bilgisi güncelleme (şimdilik desteklenmiyor)
+      print('⚠️ Kart bilgisi güncelleme desteklenmiyor');
+      return false;
     } catch (e) {
       print('❌ Kart güncellenirken hata: $e');
       return false;
@@ -219,24 +238,7 @@ class CustomerCardsApi {
   // ==================== DELETE CARD ====================
   Future<bool> deleteCard(int cardId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Customer ID'yi farklı kaynaklardan al - STRING ÖNCE!
-      int? customerId;
-      
-      // 1. İlk önce STRING olarak dene (admin_user_id STRING olarak kayıtlı!)
-      final customerIdStr = prefs.getString('admin_user_id') ??  
-                            prefs.getString('customer_id') ?? 
-                            prefs.getString('user_id');
-      
-      if (customerIdStr != null && customerIdStr.isNotEmpty) {
-        customerId = int.tryParse(customerIdStr);
-      }
-      
-      // 2. Bulunamadıysa INT olarak dene
-      if (customerId == null) {
-        customerId = prefs.getInt('customer_id') ?? prefs.getInt('user_id');
-      }
+      final customerId = await _getCustomerId();
       
       if (customerId == null) {
         print('❌ Customer ID bulunamadı');
@@ -245,18 +247,14 @@ class CustomerCardsApi {
       
       print('🗑️ Kart siliniyor - Card ID: $cardId');
       
-      final request = http.Request(
-        'DELETE',
-        Uri.parse('$baseUrl/customer_cards.php'),
-      );
-      request.headers['Content-Type'] = 'application/json';
-      request.body = json.encode({
-        'customer_id': customerId,
-        'cardId': cardId,
-      });
-      
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 10));
-      final response = await http.Response.fromStream(streamedResponse);
+      final response = await http.post(
+        Uri.parse('$baseUrl/delete_saved_card.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'customer_id': customerId,
+          'card_id': cardId,
+        }),
+      ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -275,6 +273,67 @@ class CustomerCardsApi {
     } catch (e) {
       print('❌ Kart silinirken hata: $e');
       return false;
+    }
+  }
+  
+  // ==================== KAYITLI KARTLA ÖDEME ====================
+  /// Kayıtlı kartla ödeme yapar
+  /// 
+  /// Returns:
+  /// - success: true/false
+  /// - requires_3d: true ise 3D Secure gerekli
+  /// - acs_html: 3D Secure HTML
+  /// - payment_id: Ödeme ID
+  Future<Map<String, dynamic>?> payWithSavedCard({
+    required int cardId,
+    required String cvv,
+    required double amount,
+    required int rideId,
+    String paymentType = 'ride_payment',
+  }) async {
+    try {
+      final customerId = await _getCustomerId();
+      
+      if (customerId == null) {
+        print('❌ Customer ID bulunamadı');
+        return null;
+      }
+      
+      print('💳 Kayıtlı kartla ödeme - Card ID: $cardId, Amount: $amount');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/pay_with_saved_card.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'customer_id': customerId,
+          'saved_card_id': cardId,
+          'cvv': cvv,
+          'amount': amount,
+          'ride_id': rideId,
+          'payment_type': paymentType,
+        }),
+      ).timeout(const Duration(seconds: 60));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        print('📥 Ödeme yanıtı: ${data['success']} - ${data['message']}');
+        
+        return {
+          'success': data['success'] ?? false,
+          'requires_3d': data['requires_3d'] ?? false,
+          'acs_html': data['acs_html'],
+          'payment_id': data['payment_id'],
+          'transaction_id': data['transaction_id'],
+          'message': data['message'] ?? 'Ödeme işlemi',
+        };
+      } else {
+        print('❌ HTTP hatası: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Ödeme hatası: $e');
+      return null;
     }
   }
 }
