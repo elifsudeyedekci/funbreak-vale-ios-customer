@@ -2347,13 +2347,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () async {
                   print('📞 Şirket aranıyor...');
                   try {
-                    final phoneUri = Uri.parse('tel:05334488253');
-                    if (await canLaunchUrl(phoneUri)) {
-                      await launchUrl(phoneUri);
-                      Navigator.of(context).pop();
-                    } else {
-                      print('❌ Telefon araması başlatılamadı');
-                    }
+                    final uri = Uri(scheme: 'tel', path: '05334488253');
+                    await launchUrl(uri);
+                    Navigator.of(context).pop();
                   } catch (e) {
                     print('❌ Arama hatası: $e');
                   }
