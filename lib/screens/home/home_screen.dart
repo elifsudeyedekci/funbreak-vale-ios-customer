@@ -2356,7 +2356,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
               ),
               const SizedBox(width: 8),
-              // TAMAM BUTONU
+              // TAMAM BUTONU - REZERVASYONLAR EKRANINA YÖNLENDİR
               ElevatedButton.icon(
                 icon: const Icon(Icons.check, color: Colors.white, size: 20),
                 label: const Text('Tamam', style: TextStyle(color: Colors.white)),
@@ -2365,8 +2365,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 onPressed: () {
-                  print('✅ Tamam - Ana sayfada kalınıyor, rezervasyon aktif');
+                  print('✅ Tamam - Rezervasyonlar ekranına yönlendiriliyor');
                   Navigator.of(context).pop();
+                  // Rezervasyonlar ekranına yönlendir (MainScreen tab index 1)
+                  Navigator.of(context).pushReplacementNamed('/reservations');
                 },
               ),
             ],
