@@ -721,12 +721,16 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               ..setNavigationDelegate(
                 NavigationDelegate(
                   onNavigationRequest: (request) {
-                    if (request.url.contains('funbreakvale://') || 
-                        request.url.contains('card_verification_callback.php')) {
+                    print('🔗 WebView Navigation: ${request.url}');
+                    
+                    // SADECE deep link'i yakalayalım (funbreakvale://)
+                    if (request.url.startsWith('funbreakvale://')) {
                       Navigator.pop(context);
                       _loadCards();
                       
-                      if (request.url.contains('success=true')) {
+                      // Deep link'i parse et
+                      if (request.url.contains('funbreakvale://card/saved') && 
+                          request.url.contains('success=true')) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('✅ Kart başarıyla doğrulandı ve kaydedildi!'),
@@ -734,16 +738,27 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                           ),
                         );
                       } else {
+                        // Hata mesajını parse et (URL'den)
+                        String errorMessage = 'Kart doğrulanamadı';
+                        
+                        final uri = Uri.parse(request.url);
+                        if (uri.queryParameters.containsKey('message')) {
+                          errorMessage = uri.queryParameters['message'] ?? errorMessage;
+                        }
+                        
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('❌ Kart doğrulanamadı'),
+                          SnackBar(
+                            content: Text('❌ $errorMessage'),
                             backgroundColor: Colors.red,
+                            duration: const Duration(seconds: 4),
                           ),
                         );
                       }
                       
                       return NavigationDecision.prevent;
                     }
+                    
+                    // Callback sayfasına normal gitsin (deep link'i bekleyeceğiz)
                     return NavigationDecision.navigate;
                   },
                 ),
