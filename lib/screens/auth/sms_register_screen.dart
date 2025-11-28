@@ -433,36 +433,161 @@ class _SmsRegisterScreenState extends State<SmsRegisterScreen> {
   
   // SÖZLEŞME METİNLERİ
   String _getKVKKText() {
-    return '''FunBreak Vale KVKK Aydınlatma Metni
+    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
+    return '''FUNBREAK VALE - YOLCULAR İÇİN KİŞİSEL VERİLERİN İŞLENMESİ VE KORUNMASINA YÖNELİK AYDINLATMA METNİ
 
-6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, kişisel verilerinizin işlenmesine ilişkin aşağıdaki bilgileri paylaşmak isteriz:
+VERİ SORUMLUSU BİLGİLERİ
 
-1. VERİ SORUMLUSU
-FunBreak Vale Hizmetleri olarak, kişisel verilerinizin işlenmesinden sorumlu veri sorumlusuyuz.
+Ticaret Ünvanı    : FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
+Mersis No         : 0388195898700001
+Ticaret Sicil No  : 1105910
+Adres             : Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
+Telefon           : 0533 448 82 53
+E-posta           : info@funbreakvale.com
+Web Sitesi        : www.funbreakvale.com
 
-2. KİŞİSEL VERİLERİN İŞLENME AMAÇLARI
-- Vale hizmeti sunumu ve yolculuk organizasyonu
-- Müşteri hesabı oluşturma ve yönetimi
-- Ödeme işlemlerinin gerçekleştirilmesi
-- Güvenlik ve dolandırıcılık önleme
-- Yasal yükümlülüklerin yerine getirilmesi
-- Hizmet kalitesinin artırılması
+════════════════════════════════════════════════════════════════════════════════
 
-3. İŞLENEN KİŞİSEL VERİLER
-Ad-soyad, telefon, e-posta, konum bilgileri, ödeme bilgileri, IP adresi, cihaz bilgileri, yolculuk geçmişi
+GİRİŞ
 
-4. VERİ AKTARIMI
-Kişisel verileriniz, hizmet sunumu için gerekli olduğu ölçüde şoförlerimiz ve iş ortaklarımızla paylaşılabilir.
+6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, FunBreak Vale olarak kişisel verilerinizin hangi amaçla işleneceğini, kimlere aktarılacağını, toplama yöntemini ve haklarınızı aşağıda açıklamaktayız.
 
-5. HAKLARINIZ
-- Kişisel verilerinize erişim
-- Düzeltme ve silme talep etme
-- İşleme itiraz etme
-- Veri taşınabilirliği
+════════════════════════════════════════════════════════════════════════════════
 
-İletişim: info@funbreakvale.com
+A. KİŞİSEL VERİ KATEGORİLERİ VE İŞLENME AMAÇLARI
 
-Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
+1. KİMLİK BİLGİSİ
+   • Ad, Soyad, T.C. Kimlik No, Doğum Tarihi, Profil Fotoğrafı
+   • Amaç: Kimlik tespiti, platform güvenliği, vale eşleştirme
+
+2. İLETİŞİM BİLGİSİ
+   • Telefon, E-posta, İkametgah, Kayıtlı Adresler
+   • Amaç: İletişim, bilgilendirme, tebligat, acil durum
+
+3. FİNANSAL BİLGİ
+   • Kart bilgisi (ilk 6+son 2 hane), IBAN, Ödeme geçmişi, İndirim kodları
+   • Amaç: Ödeme tahsili, fatura düzenleme, muhasebe
+
+4. YOLCULUK VERİLERİ
+   • Alış/Varış noktaları, Rota, GPS konumu, Mesafe, Süre, Bekleme
+   • Amaç: Hizmet sunumu, ücretlendirme, takip, güvenlik
+
+5. ARAÇ BİLGİSİ
+   • Plaka, Marka/Model, Renk, Yıl, Ruhsat
+   • Amaç: Vale'nin doğru aracı tanıması, güvenlik
+
+6. DEĞERLENDİRME BİLGİSİ
+   • Puanlar, Yorumlar, Şikayetler
+   • Amaç: Hizmet kalitesi, performans değerlendirme
+
+7. LOKASYON BİLGİSİ
+   • Canlı GPS konumu (vale çağırırken), Kayıtlı adresler
+   • Amaç: Vale eşleştirme, mesafe hesaplama
+   • NOT: Yolculuk sırasında Vale'nin konumu takip edilir, Yolcu'nun değil
+
+8. CİHAZ BİLGİSİ
+   • Device ID, İşletim sistemi, IP adresi, Tarayıcı
+   • Amaç: Teknik destek, güvenlik, uygulama performansı
+
+9. MESAJLAŞMA KAYITLARI
+   • Vale ile mesajlar, Destek talepleri, Şikayetler, Köprü arama kayıtları
+   • Amaç: Hizmet kalitesi, uyuşmazlık çözümü, delil
+
+10. ÇEREZ VERİLERİ
+    • Zorunlu/Fonksiyonel/Analitik/Reklam çerezleri
+    • Amaç: Uygulama işlevselliği, kullanıcı deneyimi, pazarlama
+
+════════════════════════════════════════════════════════════════════════════════
+
+B. VERİLERİN TOPLANMA YÖNTEMİ
+
+• Kayıt/Üyelik formları
+• Mobil uygulama kullanımı (GPS, mesajlaşma, işlemler)
+• Web sitesi (form, çerez)
+• Sistem kayıtları (sunucu log, API)
+• Müşteri hizmetleri (telefon, e-posta, canlı destek)
+• Üçüncü taraf entegrasyonlar (ödeme, SMS, harita)
+
+════════════════════════════════════════════════════════════════════════════════
+
+C. VERİLERİN AKTARILMASI
+
+1. VALE'LERE: Ad-Soyad, Profil Fotoğrafı, Telefon (gizli), Adresler, Puan
+2. GRUP ŞİRKETLERİ: Tüm veriler (ortak hizmet, teknik destek, raporlama)
+3. HİZMET SAĞLAYICILARA: AWS, SMS, Ödeme, Google Maps, NetGSM, Analytics
+4. HUKUK MÜŞAVİRLERİ: Yasal süreç gerektiren veriler
+5. KAMU KURUMLARINA: Emniyet, Mahkeme, Vergi Dairesi (kanuni yükümlülük)
+6. YURT DIŞINA: Bulut sunucu, analitik hizmetler (açık rıza ile)
+
+════════════════════════════════════════════════════════════════════════════════
+
+D. HAKLARINIZ (KVKK Madde 11)
+
+• Kişisel verilerinizin işlenip işlenmediğini öğrenme
+• İşlenmişse bilgi talep etme
+• İşlenme amacını ve uygunluğunu öğrenme
+• Aktarıldığı üçüncü kişileri bilme
+• Eksik/yanlış verilerin düzeltilmesini isteme
+• Verilerin silinmesini/yok edilmesini isteme
+• İşlemlerin üçüncü kişilere bildirilmesini isteme
+• Otomatik sistemlerle analiz sonucuna itiraz etme
+• Kanuna aykırı işlemeden zarar görürse tazminat talep etme
+
+BAŞVURU YÖNTEMİ:
+• Yazılı: Armağanevler Mah. Ortanca Sk. No:69/22 Ümraniye/İstanbul
+• E-posta: info@funbreakvale.com (güvenli e-imza ile)
+• Web: www.funbreakvale.com/kvkk-basvuru
+• Mobil: Ayarlar > KVKK > Başvuru Yap
+
+Başvurular 30 gün içinde cevaplanır.
+
+════════════════════════════════════════════════════════════════════════════════
+
+E. SAKLAMA SÜRESİ
+
+• Kimlik/İletişim: Üyelik + 10 yıl
+• Finansal: 10 yıl (Vergi Usul Kanunu)
+• Yolculuk Kayıtları: 5 yıl
+• GPS/Konum: 2 yıl
+• Mesajlaşma: 2 yıl
+• Değerlendirme: 3 yıl
+• Çerezler: 6 ay - 2 yıl
+
+════════════════════════════════════════════════════════════════════════════════
+
+F. VERİ GÜVENLİĞİ
+
+• SSL/TLS şifreleme (256-bit)
+• Güvenlik duvarı, yedekleme
+• Erişim logları, şifreli saklama
+• PCI DSS uyum, 3D Secure
+• Personel eğitimi, gizlilik sözleşmeleri
+
+════════════════════════════════════════════════════════════════════════════════
+
+İLETİŞİM
+
+FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
+Armağanevler Mah. Ortanca Sk. No: 69/22 Ümraniye/İstanbul
+Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
+Web: www.funbreakvale.com
+
+════════════════════════════════════════════════════════════════════════════════
+
+AÇIK RIZA BEYANI
+
+Bu Aydınlatma Metni'ni okuyup anladığımı, özgür irademle kabul ettiğimi ve kişisel verilerimin işlenmesine ve yurt dışına aktarılmasına izin verdiğimi beyan ederim.
+
+YOLCU BİLGİLERİ (Otomatik Doldurulacak):
+• Ad Soyad: [Sisteme kayıtlı bilgi]
+• Telefon: [Sisteme kayıtlı bilgi]
+• E-posta: [Sisteme kayıtlı bilgi]
+• IP Adresi: [Otomatik]
+• Cihaz ID: [Otomatik]
+• GPS Konum: [Otomatik]
+• Tarih/Saat: [Otomatik]
+
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
   }
   
   String _getUserAgreementText() {
