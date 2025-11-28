@@ -306,21 +306,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
                 
-                // Register Button
+                // Register Button - ZORUNLU SÖZLEŞMELER KABUL EDİLMEDEN AKTİF OLMAZ!
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
+                    onPressed: (_isLoading || !_kvkkAccepted || !_userAgreementAccepted) ? null : _register,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD700),
+                      backgroundColor: (_kvkkAccepted && _userAgreementAccepted) 
+                          ? const Color(0xFFFFD700) 
+                          : Colors.grey[400],
                       foregroundColor: Colors.black,
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[600],
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.black)
-                        : const Text(
-                            'Kayıt Ol',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        : Text(
+                            (_kvkkAccepted && _userAgreementAccepted) 
+                                ? 'Kayıt Ol' 
+                                : 'Zorunlu Sözleşmeleri Kabul Edin',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
@@ -786,55 +792,164 @@ Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
   }
   
   String _getUserAgreementText() {
-    return '''FunBreak Vale Kullanıcı Sözleşmesi
+    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
+    return '''FUNBREAK VALE - YOLCU (MÜŞTERİ) KULLANIM KOŞULLARI SÖZLEŞMESİ
 
-1. HİZMET KAPSAMI
-FunBreak Vale, müşterilerimize profesyonel vale (valet) hizmeti sunmaktadır.
+════════════════════════════════════════════════════════════════════════════════
 
-2. KULLANIM ŞARTLARI
-- 18 yaşını dolmuş olmak
-- Geçerli bir telefon numarası
-- Doğru konum bilgisi paylaşımı
-- Ödeme yükümlülüklerini yerine getirmek
+1. TARAFLAR
 
-3. FİYATLANDIRMA
-- Mesafe bazlı fiyatlandırma
-- Bekleme ücreti: İlk 15 dakika ücretsiz, sonrası her 15 dakika için panel ayarlarındaki ücret
-- Saatlik paketler mevcut
-- Fiyatlar anında gösterilir
+İşbu Sözleşme, Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul adresinde mukim, 0388195898700001 Mersis numaralı FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI ("FunBreak Vale") ile mobil uygulama üzerinden özel şoför ve vale hizmeti alan ("Yolcu" veya "Müşteri") arasındadır.
 
-4. İPTAL VE İADE
-- Şoför bulunamadan iptal: Ücretsiz
-- Şoför atandıktan sonra iptal: İptal ücreti uygulanabilir
-- Yolculuk başladıktan sonra iptal: Tam ücret tahsil edilir
+════════════════════════════════════════════════════════════════════════════════
 
-5. SORUMLULUK
-- Hizmet kalitesi garanti edilir
-- Araç içi eşyalardan şoför sorumlu değildir
-- Müşteri güvenliği önceliğimizdir
+2. SÖZLEŞMENİN AMACI VE KONUSU
 
-6. GİZLİLİK
-Kişisel bilgileriniz KVKK kapsamında korunur.
+2.1. Bu Sözleşme, Yolcu için özel şoför ve vale bulma hizmetini sunan FunBreak Vale ile Yolcu arasındaki mobil uygulama kullanımına ilişkin hak ve yükümlülükleri belirtir.
 
-Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
+2.2. FunBreak Vale, Yolcu ile Vale (sürücü) arasında aracılık hizmeti sunan bir teknoloji platformudur.
+
+════════════════════════════════════════════════════════════════════════════════
+
+3. KULLANIM KOŞULLARI
+
+3.1. GENEL ŞARTLAR
+• Yolcu, mobil uygulama üzerinden kullanıcı adı ve şifresi ile hizmet alabilir
+• Vale (sürücü), algoritma ile belirlenir (konum, yoğunluk, performans)
+• Vale, Yolcunun aracı ile Yolcuyu belirttiği lokasyona transfer eder
+
+3.2. KAYIT ŞARTLARI
+• En az 18 yaşında ve medeni hakları kullanma ehliyetine sahip olmak
+• Doğru, kesin ve güncel bilgi vermek
+• Gerekli bilgiler: Ad-Soyad, T.C. Kimlik No, Telefon, E-posta, Ödeme Bilgisi
+
+════════════════════════════════════════════════════════════════════════════════
+
+4. HİZMET ALMA SÜRECİ
+
+a) Yolcu, mobil uygulama üzerinden alış ve varış lokasyonunu seçerek Vale çağırır
+b) Sistem tahmini fiyat gösterir
+c) Vale bulunduğunda bildirim gelir
+d) Yolcu, harita üzerinden Vale'yi canlı takip edebilir
+e) Yolcu, köprü arama sistemi ile iletişime geçebilir
+f) Yolculuk rotası ve bekleme noktaları otomatik kaydedilir
+g) Ödeme yapılana kadar yeni yolculuk başlatılamaz
+h) Yolcu, yolculuk sonunda Vale'yi 1-5 yıldız puanlayabilir
+
+════════════════════════════════════════════════════════════════════════════════
+
+5. FİYATLANDIRMA VE ÖDEME
+
+• Mesafe bazlı fiyatlandırma
+• Bekleme ücreti: İlk 15 dakika ücretsiz, sonrası 200 TL/15 dakika
+• Saatlik paketler mevcut
+• Ödeme: Kredi/Banka Kartı (3D Secure), Havale/EFT
+
+════════════════════════════════════════════════════════════════════════════════
+
+6. İPTAL VE İADE
+
+• Vale atanmadan iptal: ÜCRETSİZ
+• Vale atandıktan sonra (45 dakikadan fazla kala): ÜCRETSİZ
+• Vale atandıktan sonra (45 dakikadan az kala): Sabit iptal ücreti
+• Yolculuk başladıktan sonra: Tam ücret tahsil edilir
+
+════════════════════════════════════════════════════════════════════════════════
+
+7. KİŞİSEL VERİLERİN KORUNMASI
+
+Yolcu, KVKK Aydınlatma Metni kapsamında kişisel verilerinin işleneceğini kabul eder.
+
+════════════════════════════════════════════════════════════════════════════════
+
+8. YETKİLİ MAHKEME
+
+İşbu Sözleşmeden doğan uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri yetkilidir.
+
+════════════════════════════════════════════════════════════════════════════════
+
+ŞİRKET BİLGİLERİ
+
+FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
+Mersis No: 0388195898700001 | Ticaret Sicil: 1105910
+Adres: Armağanevler Mah. Ortanca Sk. No: 69/22 Ümraniye/İstanbul
+Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
+
+════════════════════════════════════════════════════════════════════════════════
+
+YOLCU BİLGİLERİ (Otomatik Doldurulacak):
+• Ad Soyad: [Sisteme kayıtlı bilgi]
+• Telefon: [Sisteme kayıtlı bilgi]
+• E-posta: [Sisteme kayıtlı bilgi]
+• IP Adresi: [Otomatik]
+• Cihaz ID: [Otomatik]
+• Tarih/Saat: [Otomatik]
+
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
   }
   
   String _getCommercialText() {
-    return '''Ticari Elektronik İleti Onayı
+    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
+    return '''FUNBREAK VALE - TİCARİ ELEKTRONİK İLETİ ONAYI
 
-6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun uyarınca:
+════════════════════════════════════════════════════════════════════════════════
 
-FunBreak Vale tarafından;
-- Kampanya ve indirim bildirimleri
-- Yeni özellik duyuruları
-- Özel fırsatlar
-- Anketler
+YASAL DAYANAK
 
-konularında SMS, e-posta, bildirim yoluyla ticari elektronik ileti almayı kabul ediyorum.
+6698 sayılı KVKK, 6563 sayılı Elektronik Ticaret Kanunu ve 29417 sayılı Yönetmelik kapsamında FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI olarak ticari elektronik ileti onayınızı almak istiyoruz.
 
-Bu iznimi istediğim zaman geri alabilirim.
+════════════════════════════════════════════════════════════════════════════════
 
-Ret için: info@funbreakvale.com veya uygulama ayarları
+GÖNDERİLEBİLECEK İLETİ TÜRLERİ
+
+1. KAMPANYA VE PROMOSYON
+   • İndirim kodları ve kuponlar
+   • Özel kampanyalar ve fırsatlar
+
+2. BİLGİLENDİRME
+   • Yeni özellik duyuruları
+   • Uygulama güncellemeleri
+
+3. KUTLAMA VE TEMENNİ
+   • Resmi ve dini bayramlar
+   • Doğum günü kutlamaları
+
+4. HATIRLATMA
+   • Rezervasyon ve ödeme hatırlatmaları
+
+════════════════════════════════════════════════════════════════════════════════
+
+RED VE GERİ ÇEKME HAKKI
+
+Dilediğiniz zaman ÜCRETSİZ olarak reddedebilirsiniz:
+• Mobil Uygulama: Ayarlar > Bildirim Tercihleri
+• E-posta: "Abonelikten Çık" linki
+• Müşteri Hizmetleri: info@funbreakvale.com
+
+════════════════════════════════════════════════════════════════════════════════
+
+ÖNEMLİ NOTLAR
+
+⚠️ Bu onay OPSİYONELDİR. Onay vermemeniz hizmetlerden yararlanmanızı engellemez.
+⚠️ İŞLEMSEL BİLDİRİMLER (yolculuk durumu, ödeme onayı) bu onaydan bağımsızdır.
+
+════════════════════════════════════════════════════════════════════════════════
+
+ŞİRKET BİLGİLERİ
+
+FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
+Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
+
+════════════════════════════════════════════════════════════════════════════════
+
+YOLCU BİLGİLERİ (Otomatik Doldurulacak):
+• Ad Soyad: [Sisteme kayıtlı bilgi]
+• Telefon: [Sisteme kayıtlı bilgi]
+• E-posta: [Sisteme kayıtlı bilgi]
+• IP Adresi: [Otomatik]
+• Tarih/Saat: [Otomatik]
+
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0'''
 
 Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
   }
