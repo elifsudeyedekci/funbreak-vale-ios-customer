@@ -704,18 +704,39 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
                 onPageFinished: (url) {
                   print('✅ 3D Secure sayfa yüklendi: $url');
                   
-                  // Callback sayfası yüklendiyse 1 saniye bekle ve başarı dialog'u aç
-                  if (url.contains('payment_callback.php?status=success')) {
-                    print('🕐 CALLBACK BAŞARILI - 1 saniye sonra dialog açılacak');
-                    Future.delayed(Duration(seconds: 1), () {
-                      if (mounted && _showWebView) {
-                        print('🎉 TIMEOUT - Başarı dialog açılıyor');
-                        setState(() {
-                          _showWebView = false;
+                  // iOS WebView için: onNavigationRequest güvenilmez, onPageFinished kullan
+                  // Callback sayfası yüklendiyse kontrol et
+                  if (url.contains('payment_callback.php')) {
+                    final uri = Uri.tryParse(url);
+                    if (uri != null) {
+                      final status = uri.queryParameters['status'];
+                      
+                      print('🎯 iOS CALLBACK: $status');
+                      
+                      if (status == 'success') {
+                        print('🕐 CALLBACK BAŞARILI - 1 saniye sonra dialog açılacak');
+                        Future.delayed(Duration(seconds: 1), () {
+                          if (mounted && _showWebView) {
+                            print('🎉 TIMEOUT - Başarı dialog açılıyor');
+                            setState(() {
+                              _showWebView = false;
+                            });
+                            _showSuccessDialog();
+                          }
                         });
-                        _showSuccessDialog();
+                      } else if (status == 'fail' || status == 'failed') {
+                        final errorMsg = uri.queryParameters['message'] ?? 'Ödeme başarısız';
+                        print('❌ CALLBACK BAŞARISIZ: $errorMsg');
+                        Future.delayed(Duration(milliseconds: 500), () {
+                          if (mounted && _showWebView) {
+                            setState(() {
+                              _showWebView = false;
+                            });
+                            _showErrorDialog(Uri.decodeComponent(errorMsg));
+                          }
+                        });
                       }
-                    });
+                    }
                   }
                 },
                 onNavigationRequest: (request) {
