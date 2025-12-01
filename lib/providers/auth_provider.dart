@@ -246,14 +246,13 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         debugPrint('✅ REGISTER: Customer ID set edildi: $_customerId');
         
-        // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        print('🔔🔔🔔 REGISTER: _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
-        try {
-          await _updateFCMToken();
+        // ✅ KAYIT BAŞARILI - FCM TOKEN KAYDET (ARKA PLANDA - BEKLEMEDEN!)
+        print('🔔🔔🔔 REGISTER: _updateFCMToken() ARKA PLANDA ÇAĞRILACAK! 🔔🔔🔔');
+        _updateFCMToken().then((_) {
           print('✅ REGISTER: _updateFCMToken() TAMAMLANDI!');
-        } catch (fcmError) {
+        }).catchError((fcmError) {
           print('❌❌❌ REGISTER: _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
-        }
+        });
         
         _setLoading(false);
         return true;
@@ -297,14 +296,13 @@ class AuthProvider with ChangeNotifier {
         _customerPhone = '05555555555';
         _customerId = '1';
         
-        // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        print('🔔🔔🔔 TEST LOGİN: _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
-        try {
-          await _updateFCMToken();
+        // ✅ TEST HESABI LOGİN - FCM TOKEN KAYDET (ARKA PLANDA - BEKLEMEDEN!)
+        print('🔔🔔🔔 TEST LOGİN: _updateFCMToken() ARKA PLANDA ÇAĞRILACAK! 🔔🔔🔔');
+        _updateFCMToken().then((_) {
           print('✅ TEST LOGİN: _updateFCMToken() TAMAMLANDI!');
-        } catch (fcmError) {
+        }).catchError((fcmError) {
           print('❌❌❌ TEST LOGİN: _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
-        }
+        });
         
         _setLoading(false);
         return true;
@@ -362,14 +360,13 @@ class AuthProvider with ChangeNotifier {
           print('⚠️ Çoklu oturum hatası (devam ediliyor): $e');
         }
         
-        // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET (AWAIT İLE BEKLE!)
-        print('🔔🔔🔔 LOGİN (CUSTOMER): _updateFCMToken() ÇAĞRILACAK! 🔔🔔🔔');
-        try {
-          await _updateFCMToken();
+        // ✅ LOGİN BAŞARILI - FCM TOKEN KAYDET (ARKA PLANDA - BEKLEMEDEN!)
+        print('🔔🔔🔔 LOGİN (CUSTOMER): _updateFCMToken() ARKA PLANDA ÇAĞRILACAK! 🔔🔔🔔');
+        _updateFCMToken().then((_) {
           print('✅ LOGİN (CUSTOMER): _updateFCMToken() TAMAMLANDI!');
-        } catch (fcmError) {
+        }).catchError((fcmError) {
           print('❌❌❌ LOGİN (CUSTOMER): _updateFCMToken() EXCEPTION: $fcmError ❌❌❌');
-        }
+        });
         
         _setLoading(false);
         return true;
@@ -568,6 +565,24 @@ class AuthProvider with ChangeNotifier {
       }
       
       print('✅ iOS CUSTOMER: İzin VERİLDİ - Token alınacak...');
+      
+      // ✅ iOS için APNs token bekle (maksimum 10 saniye)
+      if (Platform.isIOS) {
+        print('📱 iOS CUSTOMER: APNs token bekleniyor...');
+        String? apnsToken;
+        for (int i = 0; i < 20; i++) {
+          apnsToken = await messaging.getAPNSToken();
+          if (apnsToken != null) {
+            print('✅ iOS CUSTOMER: APNs token alındı (${i * 500}ms sonra)');
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+        
+        if (apnsToken == null) {
+          print('⚠️ iOS CUSTOMER: APNs token 10 saniyede alınamadı - yine de FCM dene');
+        }
+      }
       
       final fcmToken = await messaging.getToken().timeout(
         const Duration(seconds: 10),

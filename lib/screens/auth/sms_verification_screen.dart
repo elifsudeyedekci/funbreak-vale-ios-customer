@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:sms_autofill/sms_autofill.dart'; // ✅ SMS OTOMATİK OKUMA!
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io'; // ✅ Platform.isIOS için!
 import '../../providers/auth_provider.dart';
 import '../main_screen.dart';
 
@@ -220,8 +221,8 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
             await authProvider.checkAuthStatus(); // Session'ı yeniden yükle
           }
           
-          // 📱 FCM TOKEN KAYDET (Bildirimler için!)
-          await _saveFCMToken(userId);
+          // 📱 FCM TOKEN KAYDET (Bildirimler için!) - ARKA PLANDA, BEKLEMEDEN!
+          _saveFCMToken(userId); // await YOK - kullanıcı beklemez!
           
           Navigator.pushAndRemoveUntil(
             context,
@@ -266,16 +267,64 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
 
   /// 📱 FCM TOKEN KAYDETME FONKSİYONU
   /// Push notification alabilmek için kullanıcının FCM token'ını backend'e kaydeder
+  /// iOS için APNs token alınana kadar bekler!
   Future<void> _saveFCMToken(String userId) async {
     try {
-      final fcmToken = await FirebaseMessaging.instance.getToken();
+      print('🔔🔔🔔 _saveFCMToken BAŞLADI - userId: $userId 🔔🔔🔔');
       
-      if (fcmToken == null || fcmToken.isEmpty) {
-        print('⚠️ FCM Token alınamadı (izin verilmemiş olabilir)');
-        return; // Token yoksa sessizce devam et, giriş/kayıt başarısını engelleme
+      final messaging = FirebaseMessaging.instance;
+      
+      // ✅ iOS için önce bildirim izni iste!
+      if (Platform.isIOS) {
+        print('📱 iOS: Bildirim izni isteniyor...');
+        final settings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        
+        print('📱 iOS İzin durumu: ${settings.authorizationStatus}');
+        
+        if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+            settings.authorizationStatus != AuthorizationStatus.provisional) {
+          print('❌ iOS: Bildirim izni reddedildi!');
+          return;
+        }
+        
+        // ✅ iOS için APNs token bekle (maksimum 10 saniye)
+        print('📱 iOS: APNs token bekleniyor...');
+        String? apnsToken;
+        for (int i = 0; i < 20; i++) {
+          apnsToken = await messaging.getAPNSToken();
+          if (apnsToken != null) {
+            print('✅ iOS: APNs token alındı (${i * 500}ms sonra)');
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+        
+        if (apnsToken == null) {
+          print('⚠️ iOS: APNs token 10 saniyede alınamadı!');
+          // Yine de FCM token dene
+        }
       }
       
-      print('📱 FCM Token kaydediliyor: ${fcmToken.substring(0, 30)}...');
+      // FCM Token al
+      print('📱 FCM Token alınıyor...');
+      final fcmToken = await messaging.getToken().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⏱️ FCM Token timeout!');
+          return null;
+        },
+      );
+      
+      if (fcmToken == null || fcmToken.isEmpty) {
+        print('⚠️ FCM Token alınamadı!');
+        return;
+      }
+      
+      print('✅ FCM Token alındı: ${fcmToken.substring(0, 30)}...');
       
       final response = await http.post(
         Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
@@ -285,12 +334,14 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
           'user_type': 'customer',
           'fcm_token': fcmToken,
         }),
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 10));
+      
+      print('📥 Backend response: ${response.statusCode}');
       
       final data = json.decode(response.body);
       
       if (data['success'] == true) {
-        print('✅ FCM Token başarıyla kaydedildi!');
+        print('✅✅✅ FCM Token başarıyla kaydedildi! ✅✅✅');
       } else {
         print('⚠️ FCM Token kaydedilemedi: ${data['message']}');
       }
