@@ -83,7 +83,18 @@ class _RideChatScreenState extends State<RideChatScreen> {
             _messages.clear();
             for (var apiMessage in apiMessages) {
               final messageType = apiMessage['message_type'] ?? 'text';
-              final messageContent = apiMessage['message_content'] ?? apiMessage['file_path'] ?? '';
+              // 🔥 FIX: image ve audio için file_path ÖNCELİKLİ olmalı!
+              // message_content boş string olabiliyor, bu yüzden önce file_path kontrol et
+              String messageContent;
+              if (messageType == 'image' || messageType == 'audio') {
+                // Resim ve ses için file_path kullan (URL burada)
+                messageContent = apiMessage['file_path']?.toString() ?? 
+                                apiMessage['message_content']?.toString() ?? '';
+              } else {
+                // Text ve location için message_content kullan
+                messageContent = apiMessage['message_content']?.toString() ?? 
+                                apiMessage['file_path']?.toString() ?? '';
+              }
               
               // Konum mesajı için lat/lng parse et
               double? lat;
