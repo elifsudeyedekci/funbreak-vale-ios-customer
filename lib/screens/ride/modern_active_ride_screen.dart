@@ -297,6 +297,12 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
       final estimatedPriceStr = widget.rideDetails['estimated_price']?.toString() ?? '0';
       final estimatedPrice = double.tryParse(estimatedPriceStr) ?? 0.0;
       
+      // ✅ TAHMİNİ FİYAT (SABİT) - İlk hesaplanan fiyat, DEĞİŞMEZ!
+      final initialPriceStr = widget.rideDetails['initial_estimated_price']?.toString() ?? 
+                              widget.rideDetails['db_initial_estimated_price']?.toString() ??
+                              estimatedPriceStr;
+      final initialEstimatedPrice = double.tryParse(initialPriceStr) ?? estimatedPrice;
+      
       await RidePersistenceService.saveActiveRide(
         rideId: rideId,
         status: widget.rideDetails['status']?.toString() ?? 'accepted',
@@ -306,6 +312,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
         driverName: _driverName(),
         driverPhone: _driverPhone(),
         driverId: widget.rideDetails['driver_id']?.toString() ?? '0',
+        initialEstimatedPrice: initialEstimatedPrice, // ✅ TAHMİNİ FİYAT SABİT!
       );
       
       print('✅ PERSİSTENCE: Yolculuk başarıyla kaydedildi - Ride ID: $rideId');

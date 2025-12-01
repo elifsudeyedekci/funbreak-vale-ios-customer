@@ -119,6 +119,7 @@ class _MainScreenState extends State<MainScreen> {
                       'pickup_address': ride['pickup_address'],
                       'destination_address': ride['destination_address'],
                       'estimated_price': ride['estimated_price'],
+                      'initial_estimated_price': ride['initial_estimated_price'] ?? ride['db_initial_estimated_price'] ?? ride['estimated_price'], // ✅ TAHMİNİ FİYAT SABİT!
                       'status': ride['status'],
                       'driver_name': ride['driver_name'] ?? 'Şoför',
                       'driver_phone': ride['driver_phone'] ?? '',
