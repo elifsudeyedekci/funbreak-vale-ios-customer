@@ -75,8 +75,10 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
     _loadHourlyPackages(); // Panel'den saatlik paketleri çek!
     
     // ✅ TAHMİNİ FİYAT (SABİT) - İLK ROTA SEÇERKENKİ FİYAT (BİR KEZ SET EDİLİR, DEĞİŞMEZ!)
+    // ÖNCE initial_estimated_price veya db_initial_estimated_price kontrol et
     _initialEstimatedPrice = double.tryParse(
           widget.rideDetails['initial_estimated_price']?.toString() ??
+          widget.rideDetails['db_initial_estimated_price']?.toString() ??
           widget.rideDetails['estimated_price']?.toString() ??
           '0',
         ) ??
