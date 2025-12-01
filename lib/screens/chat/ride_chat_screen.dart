@@ -483,24 +483,30 @@ class _RideChatScreenState extends State<RideChatScreen> {
                     if (app == null) return;
                     
                     String mapUrl;
+                    String fallbackUrl;
+                    
                     if (app == 'google') {
                       // Google Maps URI
                       mapUrl = Platform.isIOS
                           ? 'comgooglemaps://?q=$lat,$lng'
                           : 'geo:$lat,$lng?q=$lat,$lng($locationName)';
+                      fallbackUrl = 'https://www.google.com/maps?q=$lat,$lng';
                     } else {
-                      // Yandex Maps URI
-                      mapUrl = 'yandexmaps://maps.yandex.com/?ll=$lng,$lat&z=16';
+                      // Yandex Maps URI - Yandex Navigator
+                      mapUrl = Platform.isIOS
+                          ? 'yandexnavi://build_route_on_map?lat_to=$lat&lon_to=$lng'
+                          : 'yandexnavi://build_route_on_map?lat_to=$lat&lon_to=$lng';
+                      fallbackUrl = 'https://yandex.com/maps/?pt=$lng,$lat&z=16';
                     }
                     
-                    print('�️ MÜŞTERİ Harita açılıyor: $mapUrl');
+                    print('🗺️ MÜŞTERİ Harita açılıyor: $mapUrl');
                     
                     final uri = Uri.parse(mapUrl);
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri, mode: LaunchMode.externalApplication);
                     } else {
-                      // Uygulama yoksa web tarayıcıda aç
-                      final webUrl = Uri.parse('https://www.google.com/maps?q=$lat,$lng');
+                      // Uygulama yoksa web tarayıcıda aç - SEÇİLEN HARİTA İÇİN!
+                      final webUrl = Uri.parse(fallbackUrl);
                       await launchUrl(webUrl, mode: LaunchMode.externalApplication);
                     }
                     
@@ -1132,7 +1138,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
   // 🌍 KONUM ARAMA API (Google Places)
   Future<List<Map<String, dynamic>>> _searchLocation(String query) async {
     try {
-      const apiKey = 'AIzaSyC_j9KEoNv7-mRMj2m6uh5NeGsqWe0Phlw'; // Google Maps API Key
+      const apiKey = 'AIzaSyAmPUh6vlin_kvFvssOyKHz5BBjp5WQMaY'; // Google Maps API Key (FunBreak Vale)
       
       final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$query&key=$apiKey&language=tr&region=TR',

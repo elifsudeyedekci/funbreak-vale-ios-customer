@@ -94,17 +94,23 @@ class _ModernActiveRideScreenState extends State<ModernActiveRideScreen> with Ti
     
     // ✅ ŞOFÖR KONUMU - SADECE GEÇERLİ BİR KONUM VARSA AYARLA!
     // Sultanahmet (41.0082, 28.9784) varsayılan değil, gerçek konum olmalı!
-    final driverLat = widget.rideDetails['driver_lat'];
-    final driverLng = widget.rideDetails['driver_lng'];
-    if (driverLat != null && driverLng != null) {
-      final lat = (driverLat as num).toDouble();
-      final lng = (driverLng as num).toDouble();
-      // Sultanahmet koordinatları değilse (varsayılan değil) kullan
-      if (lat != 41.0082 || lng != 28.9784) {
+    // Önce driver_lat/driver_lng, sonra driver_current_lat/driver_current_lng dene
+    final double? lat = (widget.rideDetails['driver_lat'] as num?)?.toDouble() ?? 
+                        (widget.rideDetails['driver_current_lat'] as num?)?.toDouble();
+    final double? lng = (widget.rideDetails['driver_lng'] as num?)?.toDouble() ?? 
+                        (widget.rideDetails['driver_current_lng'] as num?)?.toDouble();
+    
+    if (lat != null && lng != null) {
+      // Sultanahmet koordinatları değilse ve geçerli Türkiye sınırları içindeyse kullan
+      final bool isValidCoord = (lat != 41.0082 || lng != 28.9784) && 
+                                (lat != 0 && lng != 0) &&
+                                (lat > 35 && lat < 43 && lng > 25 && lng < 45);
+      
+      if (isValidCoord) {
         _driverLocation = LatLng(lat, lng);
         print('📍 [MÜŞTERİ] İlk şoför konumu ayarlandı: $lat, $lng');
       } else {
-        print('⚠️ [MÜŞTERİ] Şoför konumu varsayılan (Sultanahmet) - beklenecek...');
+        print('⚠️ [MÜŞTERİ] Şoför konumu geçersiz/varsayılan ($lat, $lng) - beklenecek...');
       }
     } else {
       print('⚠️ [MÜŞTERİ] Şoför konumu henüz yok - API\'den beklenecek...');
@@ -406,11 +412,20 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   }
 
   String _driverName() {
+    // Önce _currentRideStatus'tan, sonra widget.rideDetails'ten al
     final dynamic fromStatus = _currentRideStatus['driver_name'];
     final dynamic fromDetails = widget.rideDetails['driver_name'];
-    final name = (fromStatus ?? fromDetails)?.toString().trim();
-    if (name == null || name.isEmpty) {
-      return 'Şoförünüz';
+    
+    // fromStatus öncelikli
+    String? name;
+    if (fromStatus != null && fromStatus.toString().trim().isNotEmpty && fromStatus.toString().trim() != 'Vale') {
+      name = fromStatus.toString().trim();
+    } else if (fromDetails != null && fromDetails.toString().trim().isNotEmpty && fromDetails.toString().trim() != 'Vale') {
+      name = fromDetails.toString().trim();
+    }
+    
+    if (name == null || name.isEmpty || name == 'Şoförünüz') {
+      return 'Vale Şoförünüz';
     }
     return name;
   }
@@ -1492,12 +1507,20 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               print('   💰 Fiyat: ₺$calculatedPrice');
 
               // ŞOFÖR KONUM BİLGİLERİNİ AL! ✅
-              if (activeRide['driver_lat'] != null && activeRide['driver_lng'] != null) {
-                final lat = (activeRide['driver_lat'] as num).toDouble();
-                final lng = (activeRide['driver_lng'] as num).toDouble();
-                
+              // Önce driver_lat/driver_lng, sonra driver_current_lat/driver_current_lng dene
+              double? lat = (activeRide['driver_lat'] as num?)?.toDouble() ?? 
+                            (activeRide['driver_current_lat'] as num?)?.toDouble();
+              double? lng = (activeRide['driver_lng'] as num?)?.toDouble() ?? 
+                            (activeRide['driver_current_lng'] as num?)?.toDouble();
+              
+              if (lat != null && lng != null) {
                 // ✅ Sultanahmet koordinatları (varsayılan) değilse kullan!
-                if (lat != 41.0082 || lng != 28.9784) {
+                // Ayrıca 0,0 koordinatlarını da filtrele
+                final bool isValidCoord = (lat != 41.0082 || lng != 28.9784) && 
+                                          (lat != 0 && lng != 0) &&
+                                          (lat > 35 && lat < 43 && lng > 25 && lng < 45); // Türkiye sınırları
+                
+                if (isValidCoord) {
                   _driverLocation = LatLng(lat, lng);
                   
                   print('📍 [MÜŞTERİ] Şoför konumu güncellendi: $lat, $lng');
@@ -1506,7 +1529,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   _updateMapMarkers();
                   _updateRoutePolyline(); // ROTA ÇİZGİSİ EKLEYELİM!
                 } else {
-                  print('⚠️ [MÜŞTERİ] Şoför konumu varsayılan (Sultanahmet) - gösterilmeyecek');
+                  print('⚠️ [MÜŞTERİ] Şoför konumu geçersiz/varsayılan ($lat, $lng) - gösterilmeyecek');
                 }
               } else {
                 print('⚠️ [MÜŞTERİ] Şoför konumu henüz alınamadı - API\'den beklenecek');

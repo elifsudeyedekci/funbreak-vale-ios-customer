@@ -107,7 +107,9 @@ class _RatingCardState extends State<RatingCard> with SingleTickerProviderStateM
             ),
           ),
           padding: const EdgeInsets.all(24),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.star, size: 60, color: Colors.white),
               const SizedBox(height: 12),
@@ -162,6 +164,8 @@ class _RatingCardState extends State<RatingCard> with SingleTickerProviderStateM
                 controller: _commentController,
                 maxLines: 3,
                 maxLength: 200,
+                textInputAction: TextInputAction.done,
+                scrollPadding: const EdgeInsets.only(bottom: 150),
                 decoration: InputDecoration(
                   hintText: 'Yorumunuzu yazın (opsiyonel)',
                   hintStyle: const TextStyle(color: Colors.white60),
@@ -218,9 +222,9 @@ class _RatingCardState extends State<RatingCard> with SingleTickerProviderStateM
               ),
             ],
           ),
+          ),
         ),
       ),
     );
   }
 }
-
