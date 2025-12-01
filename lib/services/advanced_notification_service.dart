@@ -272,7 +272,7 @@ class AdvancedNotificationService {
   }
   
   // ✅ iOS için APNs bekle ve FCM token al (ARKA PLANDA!)
-  Future<void> _waitForApnsAndGetFcmToken() async {
+  static Future<void> _waitForApnsAndGetFcmToken() async {
     try {
       String? apnsToken;
       // Maksimum 5 deneme, her biri 500ms (toplam 2.5 saniye max)
@@ -296,10 +296,10 @@ class AdvancedNotificationService {
   }
   
   // ✅ FCM Token al (Android ve iOS ortak)
-  Future<void> _getFcmTokenDirect() async {
+  static Future<void> _getFcmTokenDirect() async {
     try {
       final token = await _messaging!.getToken().timeout(
-        Duration(seconds: 5), // 10 -> 5 saniye
+        Duration(seconds: 5),
         onTimeout: () {
           print('⏱️ FCM token alma timeout!');
           return null;
@@ -314,10 +314,6 @@ class AdvancedNotificationService {
       }
     } catch (e) {
       print('❌ FCM token alma hatası: $e');
-    }
-      
-    } catch (e) {
-      print('❌ İzin isteme hatası: $e');
     }
   }
   

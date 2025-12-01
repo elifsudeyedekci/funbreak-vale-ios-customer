@@ -1278,15 +1278,36 @@ class _RideChatScreenState extends State<RideChatScreen> {
   Future<void> _startRecording() async {
     try {
       // 🔥 iOS İÇİN DÜZGÜN MİKROFON İZNİ KONTROLÜ
-      final status = await Permission.microphone.status;
-      // Mikrofon izni durumu: $status
+      var status = await Permission.microphone.status;
+      print('🎤 iOS Mikrofon izni durumu: $status');
       
-      if (status.isDenied) {
-        // İlk kez istenecek - sistem popup'ı çıkacak
-        final result = await Permission.microphone.request();
-        // Mikrofon izni sonucu: $result
-        
-        if (!result.isGranted) {
+      // iOS'ta ilk kez sorulacaksa veya denied ise izin iste
+      if (!status.isGranted) {
+        print('🎤 Mikrofon izni isteniyor...');
+        status = await Permission.microphone.request();
+        print('🎤 Mikrofon izni sonucu: $status');
+      }
+      
+      // İzin verilmediyse
+      if (!status.isGranted) {
+        if (status.isPermanentlyDenied) {
+          // Kalıcı olarak reddedilmiş - ayarlara yönlendir
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('❌ Mikrofon izni gerekli! Ayarlardan izin verin.'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'Ayarlar',
+                  textColor: Colors.white,
+                  onPressed: () => openAppSettings(),
+                ),
+              ),
+            );
+          }
+        } else {
+          // Normal red
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -1295,27 +1316,11 @@ class _RideChatScreenState extends State<RideChatScreen> {
               ),
             );
           }
-          return;
-        }
-      } else if (status.isPermanentlyDenied || status.isRestricted) {
-        // Kalıcı olarak reddedilmiş - ayarlara yönlendir
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('❌ Mikrofon izni gerekli! Ayarlardan izin verin.'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-              action: SnackBarAction(
-                label: 'Ayarlar',
-                textColor: Colors.white,
-                onPressed: () => openAppSettings(),
-              ),
-            ),
-          );
         }
         return;
       }
-      // status.isGranted ise devam et
+      
+      print('✅ Mikrofon izni verildi, kayıt başlatılıyor...');
       
       final directory = await getApplicationDocumentsDirectory();
       final audioDir = Directory('${directory.path}/audio');
