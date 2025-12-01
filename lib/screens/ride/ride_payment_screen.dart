@@ -557,52 +557,61 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _discountCodeController,
-                          enabled: !_discountApplied, // 🔥 İndirim uygulandıysa YAZMA ENGELLE!
-                          readOnly: _discountApplied, // 🔥 Uygulandıysa sadece oku
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _discountApplied ? Colors.grey : Colors.black,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'İndirim kodu',
-                            hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
-                            filled: _discountApplied,
-                            fillColor: _discountApplied ? Colors.grey[200] : null,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                        child: Stack(
+                          alignment: Alignment.centerRight,
+                          children: [
+                            TextField(
+                              controller: _discountCodeController,
+                              enabled: !_discountApplied, // 🔥 İndirim uygulandıysa YAZMA ENGELLE!
+                              readOnly: _discountApplied, // 🔥 Uygulandıysa sadece oku
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _discountApplied ? Colors.grey : Colors.black,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'İndirim kodu',
+                                hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                                filled: _discountApplied,
+                                fillColor: _discountApplied ? Colors.grey[200] : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                prefixIcon: Icon(
+                                  Icons.confirmation_number,
+                                  size: 18,
+                                  color: _discountApplied ? Colors.grey : Colors.green,
+                                ),
+                                // ✅ suffixIcon kaldırıldı - Stack ile dışarıda eklendi
+                              ),
+                              textCapitalization: TextCapitalization.characters,
+                              onChanged: (value) {
+                                setState(() {}); // X ikonunu göstermek için
+                              },
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            prefixIcon: Icon(
-                              Icons.confirmation_number,
-                              size: 18,
-                              color: _discountApplied ? Colors.grey : Colors.green,
-                            ),
-                            suffixIcon: _discountCodeController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 20, color: Colors.red),
-                                    onPressed: () {
-                                      setState(() {
-                                        _discountCodeController.clear();
-                                        _discountAmount = 0.0;
-                                        _discountApplied = false;
-                                      });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('🗑️ İndirim kodu kaldırıldı'),
-                                          backgroundColor: Colors.orange,
-                                          duration: Duration(seconds: 1),
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : null,
-                          ),
-                          textCapitalization: TextCapitalization.characters,
-                          onChanged: (value) {
-                            setState(() {}); // X ikonunu göstermek için
-                          },
+                            // ✅ X BUTONU - TextField dışında Stack ile (her zaman tıklanabilir!)
+                            if (_discountCodeController.text.isNotEmpty)
+                              Positioned(
+                                right: 4,
+                                child: IconButton(
+                                  icon: const Icon(Icons.clear, size: 20, color: Colors.red),
+                                  onPressed: () {
+                                    setState(() {
+                                      _discountCodeController.clear();
+                                      _discountAmount = 0.0;
+                                      _discountApplied = false;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('🗑️ İndirim kodu kaldırıldı'),
+                                        backgroundColor: Colors.orange,
+                                        duration: Duration(seconds: 1),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -811,6 +820,10 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     try {
       print('📡 API çağrısı başlıyor: validate_discount.php');
       
+      // Müşteri ID'yi al
+      final prefs = await SharedPreferences.getInstance();
+      final customerId = prefs.getString('user_id') ?? '0';
+      
       // Backend'den indirim kodu doğrula
       final response = await http.post(
         Uri.parse('https://admin.funbreakvale.com/api/validate_discount.php'),
@@ -818,6 +831,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         body: jsonEncode({
           'code': code,
           'total_amount': _totalPrice,
+          'customer_id': int.tryParse(customerId) ?? 0, // ✅ Kişi başı limit kontrolü için
         }),
       ).timeout(const Duration(seconds: 10));
       
