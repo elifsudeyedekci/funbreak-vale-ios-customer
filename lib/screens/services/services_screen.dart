@@ -12,6 +12,7 @@ class ServicesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode ? Colors.black : const Color(0xFFF8F9FA),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Hizmetler'),
         backgroundColor: const Color(0xFFFFD700),
         foregroundColor: Colors.black,
@@ -21,39 +22,56 @@ class ServicesScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
           crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.1,
           children: [
             _buildServiceCard(
               context,
-              'Vale Hizmeti',
-              'Araç park etme ve getirme hizmeti',
-              Icons.directions_car,
+              'Mesafe Bazlı Vale',
+              'KM\'ye göre ücretlendirme',
+              Icons.route,
               const Color(0xFFFFD700),
               themeProvider,
             ),
             _buildServiceCard(
               context,
-              'Saatlik Paket',
-              'Saatlik araç kiralama paketi',
+              'Saatlik Vale',
+              'Saatlik paket hizmeti',
               Icons.access_time,
               const Color(0xFFFFA500),
               themeProvider,
             ),
             _buildServiceCard(
               context,
-              'VIP Transfer',
-              'Özel araç transfer hizmeti',
-              Icons.star,
-              const Color(0xFFFF8C00),
+              'Araç Muayenesi',
+              'Periyodik muayene hizmeti',
+              Icons.verified_user,
+              const Color(0xFF4CAF50),
               themeProvider,
             ),
             _buildServiceCard(
               context,
-              'Kurye Hizmeti',
-              'Hızlı teslimat ve kurye hizmeti',
-              Icons.delivery_dining,
-              const Color(0xFFDAA520),
+              'Araç Yıkama',
+              'İç ve dış temizlik',
+              Icons.local_car_wash,
+              const Color(0xFF2196F3),
+              themeProvider,
+            ),
+            _buildServiceCard(
+              context,
+              'Araç Bakımı',
+              'Periyodik bakım hizmeti',
+              Icons.build,
+              const Color(0xFF9C27B0),
+              themeProvider,
+            ),
+            _buildServiceCard(
+              context,
+              'Lastik Değişimi',
+              'Yaz/kış lastik değişimi',
+              Icons.tire_repair,
+              const Color(0xFFFF5722),
               themeProvider,
             ),
           ],
@@ -82,59 +100,47 @@ class ServicesScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$title seçildi'),
-                backgroundColor: color,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 32,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              child: Icon(
+                icon,
+                size: 28,
+                color: color,
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 11,
+                color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

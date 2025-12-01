@@ -58,6 +58,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
   
   // ÖZEL KONUM BİLGİSİ
   Map<String, dynamic>? _specialLocation;
+  double _locationExtraFee = 0.0; // ✅ ÖZEL KONUM ÜCRETİ
   
   @override
   void initState() {
@@ -65,6 +66,16 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     
     // ✅ ÖZEL KONUM BİLGİSİ AL (varsa)
     _specialLocation = widget.rideStatus?['special_location'] ?? widget.rideDetails?['special_location'];
+    
+    // ✅ ÖZEL KONUM ÜCRETİ AL
+    _locationExtraFee = double.tryParse(
+      widget.rideStatus['location_extra_fee']?.toString() ?? 
+      widget.rideDetails['location_extra_fee']?.toString() ?? '0'
+    ) ?? 0.0;
+    
+    if (_locationExtraFee > 0) {
+      print('🗺️ ÖDEME: Özel konum ücreti: ₺${_locationExtraFee.toStringAsFixed(0)}');
+    }
     
     // ÖNCELİKLE ride status'tan verileri al
     _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
@@ -175,11 +186,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       return; // Hesaplama bitir!
     }
     
-    // ✅ NORMAL YOLCULUK - estimated_price (bekleme dahil olabilir), waiting hesapla, base = estimated - waiting
-    final estimatedPrice = double.tryParse(widget.rideDetails['estimated_price']?.toString() ?? '0') ?? 0.0;
-    _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
-    
-    // ✅ MESAFE HESAPLAMA - Backend'den total_distance gelir (current_km veya total_distance_km da olabilir)
+    // ✅ MESAFE HESAPLAMA - Backend'den total_distance gelir
     _distance = double.tryParse(
       widget.rideStatus['total_distance']?.toString() ??
       widget.rideStatus['current_km']?.toString() ??
@@ -189,6 +196,10 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     ) ?? 0.0;
     
     print('📏 MÜŞTERİ ÖDEME: Toplam mesafe = ${_distance.toStringAsFixed(2)} km');
+    
+    // ✅ NORMAL YOLCULUK VS SAATLİK PAKET
+    final estimatedPrice = double.tryParse(widget.rideDetails['estimated_price']?.toString() ?? '0') ?? 0.0;
+    _waitingMinutes = widget.rideStatus['waiting_minutes'] ?? 0;
     
     // SAATLİK PAKET KONTROLÜ - GECELİKTE BEKLEME YOK!
     final serviceType = widget.rideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
@@ -220,13 +231,21 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       }
     }
     
-    // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
-    // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!
-    final finalPrice = widget.rideStatus['final_price'];
-    final backendEstimatedPrice = widget.rideStatus['estimated_price'] ?? 
-                                   widget.rideDetails['estimated_price'] ?? 
-                                   estimatedPrice;
-    
+    // ✅ FİYAT HESAPLAMA - SAATLİK PAKET vs NORMAL YOLCULUK
+    if (isHourlyPackage) {
+      // SAATLİK PAKET - Sabit fiyat, bekleme yok, KM yok
+      _basePrice = estimatedPrice;
+      _waitingFee = 0.0;
+      _totalPrice = estimatedPrice;
+      print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Sabit fiyat: ₺${_totalPrice.toStringAsFixed(2)}');
+    } else {
+      // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
+      // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!
+      final finalPrice = widget.rideStatus['final_price'];
+      final backendEstimatedPrice = widget.rideStatus['estimated_price'] ?? 
+                                     widget.rideDetails['estimated_price'] ?? 
+                                     estimatedPrice;
+      
       // Backend'den ayrı değerleri çek (varsa)
       final backendBasePrice = widget.rideStatus['base_price_only'] ?? 
                                 widget.rideStatus['distance_only_price'] ?? 
@@ -244,15 +263,16 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       if (backendBasePrice != null && backendBasePrice > 0) {
         // Backend base_price_only gönderiyor (mesafe ücreti)
         _basePrice = double.tryParse(backendBasePrice.toString()) ?? 0.0;
-        // Bekleme = Toplam - Mesafe
-        _waitingFee = _totalPrice - _basePrice;
-        print('💳 ÖDEME: Backend base_price_only kullanıldı - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
+        // Bekleme = Toplam - Mesafe - Özel Konum Ücreti
+        _waitingFee = _totalPrice - _basePrice - _locationExtraFee;
+        print('💳 ÖDEME: Backend base_price_only kullanıldı - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Özel Konum: ₺${_locationExtraFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
       } else {
         // Backend base_price_only göndermemişse manuel hesapla
         _waitingFee = _calculateWaitingFee(_waitingMinutes);
-        _basePrice = _totalPrice - _waitingFee;
-        print('💳 ÖDEME: Manuel hesaplama - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
+        _basePrice = _totalPrice - _waitingFee - _locationExtraFee;
+        print('💳 ÖDEME: Manuel hesaplama - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Özel Konum: ₺${_locationExtraFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
       }
+    }
     
     // setState ile UI güncelle
     setState(() {});
@@ -368,6 +388,13 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                     _buildPaymentRow('⏰ Bekleme Ücreti', '₺${_waitingFee.toStringAsFixed(2)} ($_waitingMinutes dk)', subtitle: 'İlk $_waitingFreeMinutes dk ücretsiz, sonrası her $_waitingIntervalMinutes dk ₺${_waitingFeePerInterval.toStringAsFixed(0)}'),
                   if (_waitingMinutes <= _waitingFreeMinutes && _waitingMinutes > 0 && _hourlyPackageLabel.isEmpty)
                     _buildPaymentRow('⏰ Bekleme (Ücretsiz)', '$_waitingMinutes dakika', isFree: true),
+                  // ✅ ÖZEL KONUM ÜCRETİ GÖSTERİMİ (Komisyonsuz!)
+                  if (_locationExtraFee > 0)
+                    _buildPaymentRow(
+                      '🗺️ Özel Konum Ücreti', 
+                      '+₺${_locationExtraFee.toStringAsFixed(2)}',
+                      subtitle: _specialLocation != null ? _specialLocation!['name'] ?? 'Özel Bölge' : 'Özel Bölge',
+                    ),
                   if (_hourlyPackageLabel.isNotEmpty)
                     _buildPaymentRow('📦 $_hourlyPackageLabel', 'Paket fiyatına dahil', subtitle: 'Saatlik pakette bekleme ücreti alınmaz'),
                   if (_discountApplied && _discountAmount > 0)

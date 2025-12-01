@@ -15,10 +15,26 @@ class RidePersistenceService {
     required String driverName,
     required String driverPhone,
     required String driverId,
+    double? initialEstimatedPrice, // ✅ İLK TAHMİNİ FİYAT (SABİT!)
     Map<String, dynamic>? additionalData,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      
+      // ✅ MEVCUT VERİYİ KONTROL ET - initial_estimated_price VARSA KORUYORUZ!
+      final existingDataJson = prefs.getString(_activeRideKey);
+      double savedInitialPrice = initialEstimatedPrice ?? estimatedPrice;
+      
+      if (existingDataJson != null) {
+        final existingData = jsonDecode(existingDataJson) as Map<String, dynamic>;
+        // Eğer daha önce kaydedilmiş bir initial_estimated_price varsa, ONU KORU!
+        if (existingData['initial_estimated_price'] != null && 
+            existingData['initial_estimated_price'] > 0 &&
+            existingData['ride_id'] == rideId) {
+          savedInitialPrice = (existingData['initial_estimated_price'] as num).toDouble();
+          print('📌 [PERSISTENCE] Mevcut initial_estimated_price korunuyor: ₺$savedInitialPrice');
+        }
+      }
       
       final rideData = {
         'ride_id': rideId,
@@ -26,6 +42,7 @@ class RidePersistenceService {
         'pickup_address': pickupAddress,
         'destination_address': destinationAddress,
         'estimated_price': estimatedPrice,
+        'initial_estimated_price': savedInitialPrice, // ✅ SABİT FİYAT!
         'driver_name': driverName,
         'driver_phone': driverPhone,
         'driver_id': driverId,
@@ -36,7 +53,7 @@ class RidePersistenceService {
       await prefs.setString(_activeRideKey, jsonEncode(rideData));
       await prefs.setString(_rideStateKey, 'active');
       
-      print('✅ Aktif yolculuk kaydedildi - Ride ID: $rideId, Status: $status');
+      print('✅ Aktif yolculuk kaydedildi - Ride ID: $rideId, Status: $status, InitialPrice: ₺$savedInitialPrice');
     } catch (e) {
       print('❌ Yolculuk kaydetme hatası: $e');
     }

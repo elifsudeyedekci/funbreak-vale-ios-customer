@@ -14,7 +14,8 @@ import '../ride/ride_payment_screen.dart';
 
 class ReservationsScreen extends StatefulWidget {
   final int initialTabIndex;
-  const ReservationsScreen({Key? key, this.initialTabIndex = 0}) : super(key: key);
+  final int? pendingRideId; // 🔥 Borçlu yolculuk ID - otomatik ödeme ekranına yönlendir
+  const ReservationsScreen({Key? key, this.initialTabIndex = 0, this.pendingRideId}) : super(key: key);
   
   @override
   State<ReservationsScreen> createState() => _ReservationsScreenState();
@@ -31,6 +32,22 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     super.initState();
     _loadPastRides();
     _loadActiveRides();
+  }
+  
+  // 🔥 Borçlu yolculuğu bul ve ödeme ekranına yönlendir
+  void _navigateToPendingRidePayment() {
+    if (widget.pendingRideId == null) return;
+    
+    // Geçmiş yolculuklarda borçlu yolculuğu bul
+    final pendingRide = _pastRides.firstWhere(
+      (ride) => ride['id']?.toString() == widget.pendingRideId.toString(),
+      orElse: () => {},
+    );
+    
+    if (pendingRide.isNotEmpty) {
+      // Ödeme ekranına yönlendir
+      _navigateToPaymentScreen(pendingRide);
+    }
   }
   
   Future<void> _loadPastRides() async {
@@ -81,6 +98,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         setState(() {
           _isLoading = false;
         });
+        
+        // 🔥 Borçlu yolculuk varsa ödeme ekranına yönlendir
+        if (widget.pendingRideId != null && _pastRides.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _navigateToPendingRidePayment();
+          });
+        }
       }
     }
   }
@@ -204,7 +228,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       ),
     );
   }
-  
+
   Widget _buildActiveRidesTab(ThemeProvider themeProvider) {
     if (_isLoadingActive) {
       return const Center(
@@ -1574,7 +1598,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   
   Widget _buildPriceBreakdown(Map<String, dynamic> ride, double estimatedPrice, double actualPrice, int waitingTime) {
     final waitingFee = waitingTime > 15 ? (waitingTime - 15) * 10.0 : 0.0;
-    final baseFare = actualPrice - waitingFee;
+    
+    // ✅ Özel konum ücreti - Backend 'location_extra_fee' gönderiyor
+    final locationExtraFee = (double.tryParse(ride['location_extra_fee']?.toString() ?? '0') ?? 0.0) > 0
+        ? double.tryParse(ride['location_extra_fee'].toString()) ?? 0.0
+        : double.tryParse(ride['special_location']?['fee']?.toString() ?? '0') ?? 0.0;
+    
+    // Temel ücret = Toplam - Bekleme - Özel Konum
+    final baseFare = actualPrice - waitingFee - locationExtraFee;
     
     // 🎁 İndirim bilgilerini al
     final discountCode = ride['discount_code']?.toString() ?? '';
@@ -1618,9 +1649,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           if (waitingFee > 0)
             _buildPriceRow('Bekleme Ücreti (${waitingTime - 15} dk)', waitingFee),
           
-          // Özel konum ücreti (varsa)
-          if (ride['special_location_fee'] != null && double.tryParse(ride['special_location_fee'].toString()) != null && double.parse(ride['special_location_fee'].toString()) > 0)
-            _buildPriceRow('Özel Konum Ücreti', double.parse(ride['special_location_fee'].toString())),
+          // ✅ Özel konum ücreti (varsa) - Backend 'location_extra_fee' gönderiyor
+          if ((ride['location_extra_fee'] != null && double.tryParse(ride['location_extra_fee'].toString()) != null && double.parse(ride['location_extra_fee'].toString()) > 0) ||
+              (ride['special_location_fee'] != null && double.tryParse(ride['special_location_fee'].toString()) != null && double.parse(ride['special_location_fee'].toString()) > 0))
+            _buildPriceRow(
+              '🗺️ Özel Konum Ücreti', 
+              double.parse((ride['location_extra_fee'] ?? ride['special_location_fee'] ?? '0').toString())
+            ),
           
           // 🎁 İndirim (varsa)
           if (hasDiscount) ...[

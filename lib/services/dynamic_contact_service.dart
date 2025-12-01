@@ -127,9 +127,9 @@ class DynamicContactService {
   // VARSAYILAN AYARLAR
   static Map<String, dynamic> _getDefaultSettings() {
     return {
-      'support_phone': {'value': '05555555555'},
-      'support_email': {'value': 'destek@funbreakvale.com'},
-      'whatsapp_number': {'value': '05555555555'},
+      'support_phone': {'value': '05334488253'},
+      'support_email': {'value': 'info@funbreakvale.com'},
+      'whatsapp_number': {'value': '05334488253'},
       'company_name': {'value': 'FunBreak Vale'},
       'company_address': {'value': 'İstanbul, Türkiye'},
     };

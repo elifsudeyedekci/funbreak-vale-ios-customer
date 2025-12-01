@@ -433,322 +433,90 @@ class _SmsRegisterScreenState extends State<SmsRegisterScreen> {
   
   // SÖZLEŞME METİNLERİ
   String _getKVKKText() {
-    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
-    return '''FUNBREAK VALE - YOLCULAR İÇİN KİŞİSEL VERİLERİN İŞLENMESİ VE KORUNMASINA YÖNELİK AYDINLATMA METNİ
+    return '''FunBreak Vale KVKK Aydınlatma Metni
 
-VERİ SORUMLUSU BİLGİLERİ
+6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, kişisel verilerinizin işlenmesine ilişkin aşağıdaki bilgileri paylaşmak isteriz:
 
-Ticaret Ünvanı    : FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
-Mersis No         : 0388195898700001
-Ticaret Sicil No  : 1105910
-Adres             : Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
-Telefon           : 0533 448 82 53
-E-posta           : info@funbreakvale.com
-Web Sitesi        : www.funbreakvale.com
+1. VERİ SORUMLUSU
+FunBreak Vale Hizmetleri olarak, kişisel verilerinizin işlenmesinden sorumlu veri sorumlusuyuz.
 
-════════════════════════════════════════════════════════════════════════════════
+2. KİŞİSEL VERİLERİN İŞLENME AMAÇLARI
+- Vale hizmeti sunumu ve yolculuk organizasyonu
+- Müşteri hesabı oluşturma ve yönetimi
+- Ödeme işlemlerinin gerçekleştirilmesi
+- Güvenlik ve dolandırıcılık önleme
+- Yasal yükümlülüklerin yerine getirilmesi
+- Hizmet kalitesinin artırılması
 
-GİRİŞ
+3. İŞLENEN KİŞİSEL VERİLER
+Ad-soyad, telefon, e-posta, konum bilgileri, ödeme bilgileri, IP adresi, cihaz bilgileri, yolculuk geçmişi
 
-6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, FunBreak Vale olarak kişisel verilerinizin hangi amaçla işleneceğini, kimlere aktarılacağını, toplama yöntemini ve haklarınızı aşağıda açıklamaktayız.
+4. VERİ AKTARIMI
+Kişisel verileriniz, hizmet sunumu için gerekli olduğu ölçüde şoförlerimiz ve iş ortaklarımızla paylaşılabilir.
 
-════════════════════════════════════════════════════════════════════════════════
+5. HAKLARINIZ
+- Kişisel verilerinize erişim
+- Düzeltme ve silme talep etme
+- İşleme itiraz etme
+- Veri taşınabilirliği
 
-A. KİŞİSEL VERİ KATEGORİLERİ VE İŞLENME AMAÇLARI
+İletişim: info@funbreakvale.com
 
-1. KİMLİK BİLGİSİ
-   • Ad, Soyad, T.C. Kimlik No, Doğum Tarihi, Profil Fotoğrafı
-   • Amaç: Kimlik tespiti, platform güvenliği, vale eşleştirme
-
-2. İLETİŞİM BİLGİSİ
-   • Telefon, E-posta, İkametgah, Kayıtlı Adresler
-   • Amaç: İletişim, bilgilendirme, tebligat, acil durum
-
-3. FİNANSAL BİLGİ
-   • Kart bilgisi (ilk 6+son 2 hane), IBAN, Ödeme geçmişi, İndirim kodları
-   • Amaç: Ödeme tahsili, fatura düzenleme, muhasebe
-
-4. YOLCULUK VERİLERİ
-   • Alış/Varış noktaları, Rota, GPS konumu, Mesafe, Süre, Bekleme
-   • Amaç: Hizmet sunumu, ücretlendirme, takip, güvenlik
-
-5. ARAÇ BİLGİSİ
-   • Plaka, Marka/Model, Renk, Yıl, Ruhsat
-   • Amaç: Vale'nin doğru aracı tanıması, güvenlik
-
-6. DEĞERLENDİRME BİLGİSİ
-   • Puanlar, Yorumlar, Şikayetler
-   • Amaç: Hizmet kalitesi, performans değerlendirme
-
-7. LOKASYON BİLGİSİ
-   • Canlı GPS konumu (vale çağırırken), Kayıtlı adresler
-   • Amaç: Vale eşleştirme, mesafe hesaplama
-   • NOT: Yolculuk sırasında Vale'nin konumu takip edilir, Yolcu'nun değil
-
-8. CİHAZ BİLGİSİ
-   • Device ID, İşletim sistemi, IP adresi, Tarayıcı
-   • Amaç: Teknik destek, güvenlik, uygulama performansı
-
-9. MESAJLAŞMA KAYITLARI
-   • Vale ile mesajlar, Destek talepleri, Şikayetler, Köprü arama kayıtları
-   • Amaç: Hizmet kalitesi, uyuşmazlık çözümü, delil
-
-10. ÇEREZ VERİLERİ
-    • Zorunlu/Fonksiyonel/Analitik/Reklam çerezleri
-    • Amaç: Uygulama işlevselliği, kullanıcı deneyimi, pazarlama
-
-════════════════════════════════════════════════════════════════════════════════
-
-B. VERİLERİN TOPLANMA YÖNTEMİ
-
-• Kayıt/Üyelik formları
-• Mobil uygulama kullanımı (GPS, mesajlaşma, işlemler)
-• Web sitesi (form, çerez)
-• Sistem kayıtları (sunucu log, API)
-• Müşteri hizmetleri (telefon, e-posta, canlı destek)
-• Üçüncü taraf entegrasyonlar (ödeme, SMS, harita)
-
-════════════════════════════════════════════════════════════════════════════════
-
-C. VERİLERİN AKTARILMASI
-
-1. VALE'LERE: Ad-Soyad, Profil Fotoğrafı, Telefon (gizli), Adresler, Puan
-2. GRUP ŞİRKETLERİ: Tüm veriler (ortak hizmet, teknik destek, raporlama)
-3. HİZMET SAĞLAYICILARA: AWS, SMS, Ödeme, Google Maps, NetGSM, Analytics
-4. HUKUK MÜŞAVİRLERİ: Yasal süreç gerektiren veriler
-5. KAMU KURUMLARINA: Emniyet, Mahkeme, Vergi Dairesi (kanuni yükümlülük)
-6. YURT DIŞINA: Bulut sunucu, analitik hizmetler (açık rıza ile)
-
-════════════════════════════════════════════════════════════════════════════════
-
-D. HAKLARINIZ (KVKK Madde 11)
-
-• Kişisel verilerinizin işlenip işlenmediğini öğrenme
-• İşlenmişse bilgi talep etme
-• İşlenme amacını ve uygunluğunu öğrenme
-• Aktarıldığı üçüncü kişileri bilme
-• Eksik/yanlış verilerin düzeltilmesini isteme
-• Verilerin silinmesini/yok edilmesini isteme
-• İşlemlerin üçüncü kişilere bildirilmesini isteme
-• Otomatik sistemlerle analiz sonucuna itiraz etme
-• Kanuna aykırı işlemeden zarar görürse tazminat talep etme
-
-BAŞVURU YÖNTEMİ:
-• Yazılı: Armağanevler Mah. Ortanca Sk. No:69/22 Ümraniye/İstanbul
-• E-posta: info@funbreakvale.com (güvenli e-imza ile)
-• Web: www.funbreakvale.com/kvkk-basvuru
-• Mobil: Ayarlar > KVKK > Başvuru Yap
-
-Başvurular 30 gün içinde cevaplanır.
-
-════════════════════════════════════════════════════════════════════════════════
-
-E. SAKLAMA SÜRESİ
-
-• Kimlik/İletişim: Üyelik + 10 yıl
-• Finansal: 10 yıl (Vergi Usul Kanunu)
-• Yolculuk Kayıtları: 5 yıl
-• GPS/Konum: 2 yıl
-• Mesajlaşma: 2 yıl
-• Değerlendirme: 3 yıl
-• Çerezler: 6 ay - 2 yıl
-
-════════════════════════════════════════════════════════════════════════════════
-
-F. VERİ GÜVENLİĞİ
-
-• SSL/TLS şifreleme (256-bit)
-• Güvenlik duvarı, yedekleme
-• Erişim logları, şifreli saklama
-• PCI DSS uyum, 3D Secure
-• Personel eğitimi, gizlilik sözleşmeleri
-
-════════════════════════════════════════════════════════════════════════════════
-
-İLETİŞİM
-
-FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
-Armağanevler Mah. Ortanca Sk. No: 69/22 Ümraniye/İstanbul
-Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
-Web: www.funbreakvale.com
-
-════════════════════════════════════════════════════════════════════════════════
-
-AÇIK RIZA BEYANI
-
-Bu Aydınlatma Metni'ni okuyup anladığımı, özgür irademle kabul ettiğimi ve kişisel verilerimin işlenmesine ve yurt dışına aktarılmasına izin verdiğimi beyan ederim.
-
-YOLCU BİLGİLERİ (Otomatik Doldurulacak):
-• Ad Soyad: [Sisteme kayıtlı bilgi]
-• Telefon: [Sisteme kayıtlı bilgi]
-• E-posta: [Sisteme kayıtlı bilgi]
-• IP Adresi: [Otomatik]
-• Cihaz ID: [Otomatik]
-• GPS Konum: [Otomatik]
-• Tarih/Saat: [Otomatik]
-
-Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
+Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
   }
   
   String _getUserAgreementText() {
-    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
-    return '''FUNBREAK VALE - YOLCU (MÜŞTERİ) KULLANIM KOŞULLARI SÖZLEŞMESİ
+    return '''FunBreak Vale Kullanıcı Sözleşmesi
 
-════════════════════════════════════════════════════════════════════════════════
+1. HİZMET KAPSAMI
+FunBreak Vale, müşterilerimize profesyonel vale (valet) hizmeti sunmaktadır.
 
-1. TARAFLAR
+2. KULLANIM ŞARTLARI
+- 18 yaşını dolmuş olmak
+- Geçerli bir telefon numarası
+- Doğru konum bilgisi paylaşımı
+- Ödeme yükümlülüklerini yerine getirmek
 
-İşbu Sözleşme, Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul adresinde mukim, 0388195898700001 Mersis numaralı FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI ("FunBreak Vale") ile mobil uygulama üzerinden özel şoför ve vale hizmeti alan ("Yolcu" veya "Müşteri") arasındadır.
+3. FİYATLANDIRMA
+- Mesafe bazlı fiyatlandırma
+- Bekleme ücreti: İlk 15 dakika ücretsiz, sonrası her 15 dakika için panel ayarlarındaki ücret
+- Saatlik paketler mevcut
+- Fiyatlar anında gösterilir
 
-════════════════════════════════════════════════════════════════════════════════
+4. İPTAL VE İADE
+- Şoför bulunamadan iptal: Ücretsiz
+- Şoför atandıktan sonra iptal: İptal ücreti uygulanabilir
+- Yolculuk başladıktan sonra iptal: Tam ücret tahsil edilir
 
-2. SÖZLEŞMENİN AMACI VE KONUSU
+5. SORUMLULUK
+- Hizmet kalitesi garanti edilir
+- Araç içi eşyalardan şoför sorumlu değildir
+- Müşteri güvenliği önceliğimizdir
 
-2.1. Bu Sözleşme, Yolcu için özel şoför ve vale bulma hizmetini sunan FunBreak Vale ile Yolcu arasındaki mobil uygulama kullanımına ilişkin hak ve yükümlülükleri belirtir.
+6. GİZLİLİK
+Kişisel bilgileriniz KVKK kapsamında korunur.
 
-2.2. FunBreak Vale, Yolcu ile Vale (sürücü) arasında aracılık hizmeti sunan bir teknoloji platformudur.
-
-════════════════════════════════════════════════════════════════════════════════
-
-3. KULLANIM KOŞULLARI
-
-3.1. GENEL ŞARTLAR
-• Yolcu, mobil uygulama üzerinden kullanıcı adı ve şifresi ile hizmet alabilir
-• Vale (sürücü), algoritma ile belirlenir (konum, yoğunluk, performans)
-• Vale, Yolcunun aracı ile Yolcuyu belirttiği lokasyona transfer eder
-
-3.2. KAYIT ŞARTLARI
-• En az 18 yaşında ve medeni hakları kullanma ehliyetine sahip olmak
-• Doğru, kesin ve güncel bilgi vermek
-• Gerekli bilgiler: Ad-Soyad, T.C. Kimlik No, Telefon, E-posta, Ödeme Bilgisi
-
-════════════════════════════════════════════════════════════════════════════════
-
-4. HİZMET ALMA SÜRECİ
-
-a) Yolcu, mobil uygulama üzerinden alış ve varış lokasyonunu seçerek Vale çağırır
-b) Sistem tahmini fiyat gösterir
-c) Vale bulunduğunda bildirim gelir
-d) Yolcu, harita üzerinden Vale'yi canlı takip edebilir
-e) Yolcu, köprü arama sistemi ile iletişime geçebilir
-f) Yolculuk rotası ve bekleme noktaları otomatik kaydedilir
-g) Ödeme yapılana kadar yeni yolculuk başlatılamaz
-h) Yolcu, yolculuk sonunda Vale'yi 1-5 yıldız puanlayabilir
-
-════════════════════════════════════════════════════════════════════════════════
-
-5. FİYATLANDIRMA VE ÖDEME
-
-• Mesafe bazlı fiyatlandırma
-• Bekleme ücreti: İlk 15 dakika ücretsiz, sonrası 200 TL/15 dakika
-• Saatlik paketler mevcut
-• Ödeme: Kredi/Banka Kartı (3D Secure), Havale/EFT
-
-════════════════════════════════════════════════════════════════════════════════
-
-6. İPTAL VE İADE
-
-• Vale atanmadan iptal: ÜCRETSİZ
-• Vale atandıktan sonra (45 dakikadan fazla kala): ÜCRETSİZ
-• Vale atandıktan sonra (45 dakikadan az kala): Sabit iptal ücreti
-• Yolculuk başladıktan sonra: Tam ücret tahsil edilir
-
-════════════════════════════════════════════════════════════════════════════════
-
-7. KİŞİSEL VERİLERİN KORUNMASI
-
-Yolcu, KVKK Aydınlatma Metni kapsamında kişisel verilerinin işleneceğini kabul eder.
-
-════════════════════════════════════════════════════════════════════════════════
-
-8. YETKİLİ MAHKEME
-
-İşbu Sözleşmeden doğan uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri yetkilidir.
-
-════════════════════════════════════════════════════════════════════════════════
-
-ŞİRKET BİLGİLERİ
-
-FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
-Mersis No: 0388195898700001 | Ticaret Sicil: 1105910
-Adres: Armağanevler Mah. Ortanca Sk. No: 69/22 Ümraniye/İstanbul
-Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
-
-════════════════════════════════════════════════════════════════════════════════
-
-YOLCU BİLGİLERİ (Otomatik Doldurulacak):
-• Ad Soyad: [Sisteme kayıtlı bilgi]
-• Telefon: [Sisteme kayıtlı bilgi]
-• E-posta: [Sisteme kayıtlı bilgi]
-• IP Adresi: [Otomatik]
-• Cihaz ID: [Otomatik]
-• Tarih/Saat: [Otomatik]
-
-Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
+Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
   }
   
   String _getCommercialText() {
-    // Kullanıcı bilgileri otomatik doldurulacak (backend log_legal_consent.php'de)
-    return '''FUNBREAK VALE - TİCARİ ELEKTRONİK İLETİ ONAYI
+    return '''Ticari Elektronik İleti Onayı
 
-════════════════════════════════════════════════════════════════════════════════
+6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun uyarınca:
 
-YASAL DAYANAK
+FunBreak Vale tarafından;
+- Kampanya ve indirim bildirimleri
+- Yeni özellik duyuruları
+- Özel fırsatlar
+- Anketler
 
-6698 sayılı KVKK, 6563 sayılı Elektronik Ticaret Kanunu ve 29417 sayılı Yönetmelik kapsamında FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI olarak ticari elektronik ileti onayınızı almak istiyoruz.
+konularında SMS, e-posta, bildirim yoluyla ticari elektronik ileti almayı kabul ediyorum.
 
-════════════════════════════════════════════════════════════════════════════════
+Bu iznimi istediğim zaman geri alabilirim.
 
-GÖNDERİLEBİLECEK İLETİ TÜRLERİ
+Ret için: info@funbreakvale.com veya uygulama ayarları
 
-1. KAMPANYA VE PROMOSYON
-   • İndirim kodları ve kuponlar
-   • Özel kampanyalar ve fırsatlar
-
-2. BİLGİLENDİRME
-   • Yeni özellik duyuruları
-   • Uygulama güncellemeleri
-
-3. KUTLAMA VE TEMENNİ
-   • Resmi ve dini bayramlar
-   • Doğum günü kutlamaları
-
-4. HATIRLATMA
-   • Rezervasyon ve ödeme hatırlatmaları
-
-════════════════════════════════════════════════════════════════════════════════
-
-RED VE GERİ ÇEKME HAKKI
-
-Dilediğiniz zaman ÜCRETSİZ olarak reddedebilirsiniz:
-• Mobil Uygulama: Ayarlar > Bildirim Tercihleri
-• E-posta: "Abonelikten Çık" linki
-• Müşteri Hizmetleri: info@funbreakvale.com
-
-════════════════════════════════════════════════════════════════════════════════
-
-ÖNEMLİ NOTLAR
-
-⚠️ Bu onay OPSİYONELDİR. Onay vermemeniz hizmetlerden yararlanmanızı engellemez.
-⚠️ İŞLEMSEL BİLDİRİMLER (yolculuk durumu, ödeme onayı) bu onaydan bağımsızdır.
-
-════════════════════════════════════════════════════════════════════════════════
-
-ŞİRKET BİLGİLERİ
-
-FUNBREAK GLOBAL TEKNOLOJI LIMITED SIRKETI
-Tel: 0533 448 82 53 | E-posta: info@funbreakvale.com
-
-════════════════════════════════════════════════════════════════════════════════
-
-YOLCU BİLGİLERİ (Otomatik Doldurulacak):
-• Ad Soyad: [Sisteme kayıtlı bilgi]
-• Telefon: [Sisteme kayıtlı bilgi]
-• E-posta: [Sisteme kayıtlı bilgi]
-• IP Adresi: [Otomatik]
-• Tarih/Saat: [Otomatik]
-
-Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
+Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
   }
 
   @override
@@ -1032,18 +800,14 @@ Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
                 ),
                 const SizedBox(height: 24),
                 
-                // Register Button - ZORUNLU SÖZLEŞMELER KABUL EDİLMEDEN AKTİF OLMAZ!
+                // Register Button
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: (_isLoading || !_kvkkAccepted || !_userAgreementAccepted) ? null : _register,
+                    onPressed: _isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: (_kvkkAccepted && _userAgreementAccepted) 
-                          ? const Color(0xFFFFD700) 
-                          : Colors.grey[400],
+                      backgroundColor: const Color(0xFFFFD700),
                       foregroundColor: Colors.black,
-                      disabledBackgroundColor: Colors.grey[300],
-                      disabledForegroundColor: Colors.grey[600],
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -1057,11 +821,9 @@ Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0''';
                               strokeWidth: 2,
                             ),
                           )
-                        : Text(
-                            (_kvkkAccepted && _userAgreementAccepted) 
-                                ? 'Kayıt Ol' 
-                                : 'Zorunlu Sözleşmeleri Kabul Edin',
-                            style: const TextStyle(
+                        : const Text(
+                            'Kayıt Ol',
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),

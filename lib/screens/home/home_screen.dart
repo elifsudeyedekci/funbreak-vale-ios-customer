@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_api_provider.dart'; // ADMİN API PROVIDER IMPORT!
 import '../../providers/ride_provider.dart';
@@ -38,7 +39,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:math';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main_screen.dart';
 
@@ -191,15 +191,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           } else if (rideStatus == 'scheduled' || rideStatus == 'pending') {
             print('📅 Bekleyen yolculuk ($rideStatus) - Yolculuk ekranı AÇILMAYACAK!');
             // Yolculuk ekranı açılmaz - kullanıcı rezervasyonlardan görebilir
-        } else {
+          } else {
             print('⏸️ Yolculuk durumu: $rideStatus - yönlendirme YAPILMAYACAK!');
+          }
+        } else {
+          print('ℹ️ Backend aktif yolculuk bulunamadı');
         }
       } else {
-          print('ℹ️ Backend aktif yolculuk bulunamadı');
+        print('❌ Backend aktif yolculuk API hatası: ${response.statusCode}');
       }
-    }
     } catch (e) {
-      print('❌ Backend aktif yolculuk kontrolü hatası: $e');
+      print('❌ Backend aktif yolculuk kontrol hatası: $e');
     }
   }
   
@@ -423,7 +425,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         
         // FİYAT HESAPLA (toplam mesafeye göre)
         final pricingData = await PricingService.getPricingData();
-        double totalPrice = PricingService.calculateDistancePrice(totalDistance, pricingData?['distance_pricing']);
+        double distancePrice = PricingService.calculateDistancePrice(totalDistance, pricingData?['distance_pricing']);
+        
+        // ✅ ÖZEL KONUM ÜCRETİ EKLE (pickup + destination + waypoints)
+        double pickupFee = PricingService.checkLocationPricing(_pickupLocation!.latitude, _pickupLocation!.longitude, pricingData?['location_pricing']);
+        double destinationFee = PricingService.checkLocationPricing(_destinationLocation!.latitude, _destinationLocation!.longitude, pricingData?['location_pricing']);
+        double waypointsFee = 0.0;
+        for (var wp in _waypoints) {
+          waypointsFee += PricingService.checkLocationPricing(wp['location'].latitude, wp['location'].longitude, pricingData?['location_pricing']);
+        }
+        double totalLocationFee = pickupFee + destinationFee + waypointsFee;
+        double totalPrice = distancePrice + totalLocationFee;
         
         setState(() {
           _estimatedPrice = totalPrice;
@@ -431,9 +443,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _isLoading = false;
         });
         
-        print('✅ Ara duraklı fiyat: ₺$totalPrice');
+        print('✅ Ara duraklı fiyat (Özel Konum Dahil): ₺$totalPrice (Mesafe: ₺$distancePrice, Özel Konum: ₺$totalLocationFee)');
       } else {
-        // Normal fiyat hesaplama (ara durak yok)
+        // Normal fiyat hesaplama (ara durak yok) - PricingService zaten özel konum ekliyor
         double totalPrice = await PricingService.calculateTotalPrice(
           originLat: _pickupLocation!.latitude,
           originLng: _pickupLocation!.longitude,
@@ -1962,12 +1974,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // 2. TALEP ZATEN _finalizeValeCall() İÇİNDE OLUŞTURULDU - DUPLICATE KALDIRILDI!
       print('ℹ️ Ride talebi zaten oluşturuldu - duplicate engellendi');
       
-      // 3. 35 SANİYE TIMER BAŞLAT - Backend 30sn'de 'scheduled' yapacak, biz 35sn'de kontrol edeceğiz!
+      // 3. 35 SANİYE TIMER BAŞLAT - Backend timer'ı manuel çağır + kontrol et!
       _driverSearchTimer = Timer(const Duration(seconds: 35), () async {
         // Eğer arama iptal edilmediyse ve modal hala açıksa
         if (!_searchCancelled && modalContext.mounted) {
           try {
-            print('⏰ 35 saniye doldu - Backend kontrolü yapılıyor...');
+            print('⏰ 35 saniye doldu - Backend timer manuel çağrılıyor...');
             
               final prefs = await SharedPreferences.getInstance();
               final customerId = prefs.getString('user_id') ?? '0';
@@ -4389,18 +4401,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           timeLog = _selectedDateTime!.toIso8601String();
           print('🕰️ Özel tarih talep: $_selectedDateTime ($timeLog)');
         } else {
-          // ❌ PHONE TIME KULLANMA! _getCorrectScheduledTime() kullan!
-          // Bu kısım artık kullanılmayacak, _getCorrectScheduledTime() server time kullanıyor
-          print('⚠️ Otomatik seçenek - _getCorrectScheduledTime() kullanılacak');
-          // scheduledDateTime burada boş kalacak, _getCorrectScheduledTime() set edecek
-          timeLog = 'AUTO_CALCULATED';
+          // "1 Saat Sonra", "2 Saat Sonra" gibi otomatik seçenekler
+          // ✅ SUNUCU SAATİ KULLAN! (Telefon saati yanlış olabilir)
+          final serverTime = await TimeService.getServerTime();
+          print('🌐 Sunucu saati: $serverTime');
+          
+          if (_selectedTimeOption == '1 Saat Sonra') {
+            scheduledDateTime = serverTime.add(const Duration(hours: 1));
+          } else if (_selectedTimeOption == '2 Saat Sonra') {
+            scheduledDateTime = serverTime.add(const Duration(hours: 2));
+          } else if (_selectedTimeOption == '30 Dakika Sonra') {
+            scheduledDateTime = serverTime.add(const Duration(minutes: 30));
+          } else {
+            // Diğer seçeneklerde 30 dakika sonra
+            scheduledDateTime = serverTime.add(const Duration(minutes: 30));
+          }
+          timeLog = scheduledDateTime!.toIso8601String();
           print('🕰️ Otomatik zaman talep: $_selectedTimeOption → $scheduledDateTime ($timeLog)');
         }
       } else {
-        // HEMEN için de SERVER TIME kullan!
-        scheduledDateTime = await TimeService.getServerTime();
-        timeLog = 'Hemen talep';
-        print('⚡ Hemen talep (SERVER TIME): $scheduledDateTime');
+        // "Hemen" seçildi - scheduled_time NULL olacak
+        scheduledDateTime = null;
+        timeLog = 'Hemen talep (scheduled_time=null)';
+        print('⚡ Hemen talep: scheduledDateTime=null');
       }
       
       // MERKEZİ FONKSİYON İLE DOĞRULAMA - SERVER TIME!
@@ -4622,7 +4645,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'destination_address': _destinationAddress,
         'destination_lat': _destinationLocation?.latitude ?? 0.0,
         'destination_lng': _destinationLocation?.longitude ?? 0.0,
-        'scheduled_time': _selectedDateTime?.toIso8601String() ?? (await TimeService.getServerTime()).add(const Duration(hours: 2)).toIso8601String(),
+        'scheduled_time': _selectedDateTime?.toIso8601String() ?? DateTime.now().add(const Duration(hours: 2)).toIso8601String(),
         'estimated_price': (_estimatedPrice ?? 0.0) - _discountAmount,
         'payment_method': 'card',
         'request_type': 'scheduled_later', // 2+ SAAT İLERİ!
@@ -5662,308 +5685,112 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     String title = '';
     String content = '';
     
-    // ÖZELLİK GERİ EKLENDİ: Detaylı içerikler! (YASAL UYUMLU v2.0 - 28 Kasım 2025)
+    // ÖZELLİK GERİ EKLENDİ: Detaylı içerikler!
     switch (termsType) {
       case 'terms':
       case 'conditions':
-        title = 'Ön Bilgilendirme Formu';
+        title = 'Ön Bilgilendirme Koşulları';
         content = '''
-ÖN BİLGİLENDİRME FORMU
-(6502 Sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği Kapsamında)
+HİZMET TANıMı VE KAPSAMI:
+• FunBreak Vale, müşteriler ile profesyonel şoförler arasında aracılık eden bir dijital platform hizmetidir.
+• Hizmet kapsamında güvenilir, ehliyet ve sigorta sahibi şoförlerle araç kullanma imkânı sunulmaktadır.
+• Şoförlerimiz sürücü kurslarından mezun, temiz sicile sahip ve deneyimli profesyonellerdir.
 
-═══════════════════════════════════════════════════
+FİYATLANDıRMA VE ÖDEME:
+• Ücretlendirme gerçek mesafe, trafik yoğunluğu ve süreye göre adil şekilde hesaplanmaktadır.
+• Bekleme ücreti: İlk 15 dakika ücretsiz, sonraki her 15 dakika için ek ücret alınır.
+• Özel konum ücretleri (havalimanı, AVM vb.) önceden bildirilmektedir.
+• Ödeme sadece yolculuk tamamlandıktan sonra kredi kartınızdan çekilecektir.
+• Yolculuk başlangıcında güvenlik amaçlı provizyon (ön ödeme) alınacak, gerçek tutar hesaplandıktan sonra düzeltilecektir.
 
-1. SATICI/SAĞLAYICI BİLGİLERİ
+GÜVENLİK VE KALİTE GARANTİSİ:
+• Tüm şoförlerimiz kimlik doğrulaması, adli sicil kontrolü ve sürücü belgesi doğrulamasından geçmiştir.
+• Araçlarımız kasko sigortası, trafik sigortası ve periyodik muayene sertifikasına sahiptir.
+• Yolculuk öncesi, sırası ve sonrası 7/24 müşteri hizmetleri desteği sağlanmaktadır.
+• Acil durumlarda 24 saat destek hattımızdan yardım alabilirsiniz.
 
-Ticaret Unvanı: FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
-Mersis No: 0388195898700001
-Ticaret Sicil No: 1105910
-Adres: Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
-Telefon: 0533 448 82 53
-E-posta: info@funbreakvale.com
-Web Sitesi: www.funbreakvale.com
-
-═══════════════════════════════════════════════════
-
-2. HİZMETİN TEMEL NİTELİKLERİ
-
-FunBreak Vale, müşteriler ile profesyonel vale (şoför) arasında aracılık hizmeti sunan dijital bir platformdur.
-
-Hizmet Kapsamı:
-• Anında Vale Hizmeti: Talep anında en yakın vale ile eşleştirme
-• Saatlik Paket Hizmeti: 0-4 saat, 4-8 saat, 8-12 saat paketleri
-• Rezervasyon Hizmeti: İleri tarihli vale rezervasyonu
-• Canlı Takip: GPS ile anlık konum takibi
-• Güvenli Ödeme: 3D Secure kredi kartı ve havale/EFT
-
-Vale Standartları:
-• En az 3 yıllık B sınıfı ehliyet
-• Adli sicil kaydı temiz
-• Kimlik ve ehliyet doğrulaması yapılmış
-• Profesyonel hizmet eğitimi almış
-
-═══════════════════════════════════════════════════
-
-3. HİZMET BEDELİ (KDV DAHİL)
-
-Anında Vale Hizmeti:
-• 0-5 km: 1.500 TL
-• 5-10 km: 1.700 TL
-• 10-15 km: 1.900 TL
-• 15-20 km: 2.200 TL
-
-Saatlik Paket Hizmeti:
-• 0-4 saat: 3.000 TL
-• 4-8 saat: 4.500 TL
-• 8-12 saat: 6.000 TL
-
-Bekleme Ücreti:
-• İlk 15 dakika: ÜCRETSİZ
-• Sonraki her 15 dakika: 200 TL
-
-Tüm fiyatlara KDV dahildir.
-
-═══════════════════════════════════════════════════
-
-4. ÖDEME ŞEKLİ VE PLANI
-
-• Kredi Kartı: Yolculuk sonunda otomatik tahsilat (3D Secure)
-• Havale/EFT: Yapı Kredi Bankası IBAN'a ödeme
-• Provizyon: Yolculuk başında güvenlik amaçlı ön provizyon alınır, hizmet sonunda gerçek tutar ile mahsuplaşılır
-
-═══════════════════════════════════════════════════
-
-5. CAYMA HAKKI
-
-6502 sayılı Kanun'un 15. maddesi (ğ) bendi uyarınca, belirli bir tarihte veya dönemde yapılması gereken, konaklama, eşya taşıma, araba kiralama, yiyecek-içecek tedariki ve eğlence veya dinlenme amacıyla yapılan boş zamanın değerlendirilmesine ilişkin sözleşmelerde CAYMA HAKKI KULLANILAMAZ.
-
-Vale hizmeti, belirli bir tarih ve saatte ifası gereken hizmet niteliğinde olduğundan, hizmet başladıktan sonra cayma hakkı kullanılamaz.
-
-═══════════════════════════════════════════════════
-
-6. İPTAL VE İADE KOŞULLARI
-
-Vale Bulunmadan Önce İptal:
-• İptal ücreti: 0 TL (Ücretsiz)
-
-Vale Bulunduktan Sonra İptal:
-• Yolculuğa 45 dakika veya daha fazla süre varsa: 0 TL (Ücretsiz)
-• Yolculuğa 45 dakikadan az süre varsa: 1.500 TL iptal ücreti
-
-Yolculuk Başladıktan Sonra:
-• İptal yapılamaz, o ana kadar gerçekleşen hizmet bedeli tahsil edilir
-
-İade Süreleri:
-• Kredi Kartı: 3-10 iş günü
-• Havale/EFT: 3-5 iş günü
-
-═══════════════════════════════════════════════════
-
-7. TESLİMAT BİLGİLERİ
-
-Vale hizmeti, dijital platform üzerinden anlık olarak sunulmaktadır. Vale, belirtilen alış noktasına ortalama 15-30 dakika içinde ulaşır.
-
-═══════════════════════════════════════════════════
-
-8. ŞİKAYET VE İTİRAZ
-
-Şirket İçi Başvuru:
-• Telefon: 0533 448 82 53 (7/24)
-• E-posta: info@funbreakvale.com
-• Uygulama: Ayarlar > Destek > Şikayet Oluştur
-• Değerlendirme süresi: 5 iş günü
-
-Tüketici Hakem Heyetleri (2025 Yılı Parasal Sınırları):
-• İlçe Tüketici Hakem Heyeti: 0 - 35.590 TL
-• İl Tüketici Hakem Heyeti: 35.590 - 71.180 TL
-• Tüketici Mahkemeleri: 71.180 TL üzeri
-
-Diğer Başvuru Kanalları:
-• Alo 175 Tüketici Hattı
-• tuketici.ticaret.gov.tr
-
-═══════════════════════════════════════════════════
-
-9. YETKİLİ MAHKEME
-
-Uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri ve İcra Müdürlükleri yetkilidir.
-
-═══════════════════════════════════════════════════
-
-İşbu Ön Bilgilendirme Formu, 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca, sözleşme kurulmadan önce tüketiciye bilgi vermek amacıyla düzenlenmiştir.
-
-FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
+MÜŞTERİ HAKLARı VE SORUMLULUKLARI:
+• Yolculuk sırasında emniyet kemeri takma yükümlülüğü müşteriye aittir.
+• Alkollü, uyuşturucu etkisi altında olan müşterilere hizmet verilmeyebilir.
+• Şoföre saygısız davranış, tehdit veya fiziksel saldırı durumunda hizmet durdurulacaktır.
+• Kişisel eşyalarınızın güvenliği müşterinin sorumluluğundadır.
+• Araçta sigara içmek ve yemek yemek yasaktır.
         ''';
         break;
       case 'contract':
         title = 'Mesafeli Satış Sözleşmesi';
         content = '''
 MESAFELİ SATIŞ SÖZLEŞMESİ
-(6502 Sayılı Tüketicinin Korunması Hakkında Kanun Kapsamında)
+FunBreak Vale Dijital Platform Hizmetleri
 
-═══════════════════════════════════════════════════
+TARAFLAR:
+Satıcı: FunBreak Vale Dijital Platform Ltd. Şti.
+Alıcı: Mobil uygulama kullanıcısı (Müşteri)
 
-MADDE 1 - TARAFLAR
+HİZMET TANIMI:
+Bu sözleşme kapsamında "Dijital Vale Aracılık Hizmeti" satın alınmaktadır. Hizmet, müşteri ile şoför arasında güvenli bağlantı kurma, ödeme işlemlerini kolaylaştırma ve kalite kontrolü yapmayı içermektedir.
 
-1.1. SATICI/SAĞLAYICI:
-Ticaret Unvanı: FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
-Mersis No: 0388195898700001
-Ticaret Sicil No: 1105910
-Adres: Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
-Telefon: 0533 448 82 53
-E-posta: info@funbreakvale.com
-Web: www.funbreakvale.com
+HİZMET BEDELİ VE ÖDEME:
+• Hizmet bedeli mesafe, süre ve özel konum ücretlerine göre hesaplanmaktadır.
+• Ödeme sadece hizmet tamamlandıktan sonra kredi kartınızdan otomatik olarak çekilecektir.
+• Yolculuk öncesi güvenlik provizyon alınacak, hizmet sonrası gerçek tutar ile düzeltilecektir.
+• İlave ücretler (bekleme, özel konum) şeffaf şekilde bildirilmektedir.
 
-1.2. ALICI/TÜKETİCİ:
-Mobil uygulama üzerinden hizmet talep eden kullanıcı. Alıcı bilgileri, uygulama kayıt bilgilerinden elde edilmektedir.
+CAYMA HAKKI VE İPTAL KOŞULLARI:
+• Henüz şoför atanmadan önce ücretsiz iptal hakkınız bulunmaktadır.
+• Şoför atandıktan sonra yapılan iptallerde zaman aralığına göre ücret kesilme hakki saklıdır.
+• 45 dakikadan az sürede yapılan iptallerde ücret kesilir, 45 dakika sonra tam iade yapılır.
+• Şoför tarafından iptal edilmesi durumunda tam iade yapılacaktır.
 
-═══════════════════════════════════════════════════
+ŞOFÖR VE ARAÇ GARANTİLERİ:
+• Tüm şoförlerimiz geçerli ehliyet, temiz sicil ve sigorta kontrolünden geçmiştir.
+• Araçlar kasko, trafik sigortası ve periyodik muayene sertifikasına sahiptir.
+• Şoför davranış standartları ve hizmet kalitesi sürekli denetlenmektedir.
 
-MADDE 2 - SÖZLEŞMENİN KONUSU
+MÜŞTERİ HAK VE SORUMLULUKLARI:
+• Güvenliğiniz için emniyet kemeri takma yükümlülüğü müşteriye aittir.
+• Kişisel eşyalar müşteri sorumluluğundadır, kayıp durumunda platform sorumlu değildir.
+• Alkol, uyuşturucu etkisinde olan müşterilere hizmet verilmeyecektir.
+• Şoföre karşı saygısız davranış hizmet durdurma sebebidir.
 
-İşbu sözleşmenin konusu, ALICI'nın SATICI'ya ait FunBreak Vale mobil uygulaması üzerinden elektronik ortamda sipariş verdiği vale (özel şoför) hizmetinin satışı ve ifası ile ilgili olarak 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği hükümleri gereğince tarafların hak ve yükümlülüklerinin belirlenmesidir.
+FORCE MAJEURE VE SORUMLULUK:
+• Doğal afetler, trafik kazaları, yol kapanması gibi kontrolümüz dışındaki durumlardan platform sorumlu değildir.
+• Şoförün trafik kurallarına uyma yükümlülüğü şahsi sorumluluğundadır.
+• Platform aracılık hizmeti vermekte olup, taşıyıcı sorumluluğu bulunmamaktadır.
 
-═══════════════════════════════════════════════════
+VERİ GÜVENLİĞİ VE GİZLİLİK:
+• Kişisel verileriniz KVKK kapsamında güvence altındadır.
+• Konum bilgileriniz sadece hizmet süresince kullanılır, sonrasında silinir.
+• Ödeme bilgileriniz şifrelenmiş şekilde güvenli sunucularda tutulur.
 
-MADDE 3 - HİZMETİN TEMEL NİTELİKLERİ
+SÖZLEŞMENİN GEÇERLİLİĞİ:
+Bu sözleşme hizmet talebinizi onayladığınız anda yürürlüğe girer ve hizmet tamamlandığında sona erer.
 
-3.1. Hizmet Türü: Vale (Özel Şoför) Aracılık Hizmeti
-3.2. Hizmet Kapsamı:
-    • Anında vale çağırma
-    • Saatlik paket hizmeti
-    • Rezervasyon hizmeti
-    • Canlı GPS takibi
-    • 7/24 müşteri desteği
+1. TARAFLAR
+• Satıcı: FunBreak Vale Teknoloji Ltd. Şti.
+• Alıcı: Platform kullanıcısı
 
-3.3. Vale Standartları:
-    • En az 3 yıllık B sınıfı ehliyet
-    • Adli sicil kaydı temiz
-    • Kimlik ve ehliyet doğrulaması yapılmış
+2. HİZMET TANIMI
+• Platform üzerinden vale (şoför) hizmeti alımı
 
-═══════════════════════════════════════════════════
+3. FİYAT VE ÖDEME
+• Hizmet bedeli kilometre ve süre bazında hesaplanır
+• Ödeme yolculuk sonunda yapılır
+• Kredi kartı, nakit veya diğer ödeme yöntemleri kullanılabilir
 
-MADDE 4 - HİZMET BEDELİ VE ÖDEME
+4. İPTAL VE İADE KOŞULLARI
+• Hizmet başlamadan önce iptal ücretsizdir
+• Hizmet başladıktan sonra iptal, tamamlanan kısım için ücretlendirilir
 
-4.1. Fiyatlandırma (KDV Dahil):
+5. SORUMLULUK
+• Platform, vale ve müşteri güvenliği için gerekli tedbirleri almıştır
+• Vale seçimi müşterinin kendi tercihidir
 
-Anında Vale:
-• 0-5 km: 1.500 TL
-• 5-10 km: 1.700 TL
-• 10-15 km: 1.900 TL
-• 15-20 km: 2.200 TL
+6. VERİ KORUMA
+• Kişisel verileriniz KVKK kapsamında korunmaktadır
+• Lokasyon bilgileri sadece hizmet için kullanılır
 
-Saatlik Paket:
-• 0-4 saat: 3.000 TL
-• 4-8 saat: 4.500 TL
-• 8-12 saat: 6.000 TL
-
-Bekleme Ücreti:
-• İlk 15 dakika ücretsiz
-• Sonraki her 15 dakika: 200 TL
-
-4.2. Ödeme Şekli:
-    • Kredi Kartı (3D Secure)
-    • Havale/EFT
-
-4.3. Provizyon:
-Yolculuk başında güvenlik amaçlı ön provizyon alınır. Hizmet tamamlandığında gerçek tutar ile mahsuplaşma yapılır.
-
-═══════════════════════════════════════════════════
-
-MADDE 5 - CAYMA HAKKI
-
-5.1. 6502 sayılı Kanun'un 15. maddesi (ğ) bendi uyarınca:
-
-"Belirli bir tarihte veya dönemde yapılması gereken, konaklama, eşya taşıma, araba kiralama, yiyecek-içecek tedariki ve eğlence veya dinlenme amacıyla yapılan boş zamanın değerlendirilmesine ilişkin sözleşmelerde" cayma hakkı kullanılamaz.
-
-5.2. Vale hizmeti, belirli bir tarih ve saatte ifası gereken hizmet niteliğinde olduğundan, HİZMET BAŞLADIKTAN SONRA CAYMA HAKKI KULLANILAMAZ.
-
-═══════════════════════════════════════════════════
-
-MADDE 6 - İPTAL VE İADE KOŞULLARI
-
-6.1. Vale Bulunmadan Önce İptal:
-    • İptal ücreti: 0 TL (Ücretsiz)
-    • Tam iade yapılır
-
-6.2. Vale Bulunduktan Sonra İptal:
-    • Yolculuğa 45 dk veya daha fazla varsa: 0 TL (Ücretsiz)
-    • Yolculuğa 45 dk'dan az varsa: 1.500 TL iptal ücreti
-
-6.3. Yolculuk Başladıktan Sonra:
-    • İptal yapılamaz
-    • O ana kadar gerçekleşen hizmet bedeli tahsil edilir
-
-6.4. İade Süreleri:
-    • Kredi Kartı: 3-10 iş günü (banka sürecine bağlı)
-    • Havale/EFT: 3-5 iş günü
-    • SATICI iade işlemini 2 iş günü içinde başlatır
-
-═══════════════════════════════════════════════════
-
-MADDE 7 - TARAFLARIN HAK VE YÜKÜMLÜLÜKLERİ
-
-7.1. SATICI'nın Yükümlülükleri:
-    • Hizmeti sözleşme koşullarına uygun sunmak
-    • Vale'lerin standartlara uygunluğunu denetlemek
-    • 7/24 müşteri desteği sağlamak
-    • Kişisel verileri KVKK kapsamında korumak
-
-7.2. ALICI'nın Yükümlülükleri:
-    • Doğru ve güncel bilgi vermek
-    • Ödeme yükümlülüklerini yerine getirmek
-    • Vale'ye saygılı davranmak
-    • Araçta sigara içmemek, yemek yememek
-
-═══════════════════════════════════════════════════
-
-MADDE 8 - MÜCBİR SEBEPLER
-
-Doğal afetler, savaş, terör, pandemi, genel grev, elektrik/internet kesintisi gibi tarafların kontrolü dışındaki durumlarda taraflar sorumlu tutulamaz. Bu hallerde hizmet iptal edilir ve tam iade yapılır.
-
-═══════════════════════════════════════════════════
-
-MADDE 9 - KİŞİSEL VERİLERİN KORUNMASI
-
-ALICI'nın kişisel verileri, 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında işlenmekte ve korunmaktadır. Detaylı bilgi için KVKK Aydınlatma Metni'ni inceleyiniz.
-
-═══════════════════════════════════════════════════
-
-MADDE 10 - UYUŞMAZLIK ÇÖZÜMÜ
-
-10.1. Şirket İçi Başvuru:
-    • Telefon: 0533 448 82 53 (7/24)
-    • E-posta: info@funbreakvale.com
-    • Değerlendirme: 5 iş günü
-
-10.2. Tüketici Hakem Heyetleri (2025):
-    • İlçe THH: 0 - 35.590 TL
-    • İl THH: 35.590 - 71.180 TL
-    • Tüketici Mahkemeleri: 71.180 TL üzeri
-
-10.3. Diğer Kanallar:
-    • Alo 175 Tüketici Hattı
-    • tuketici.ticaret.gov.tr
-
-═══════════════════════════════════════════════════
-
-MADDE 11 - YETKİLİ MAHKEME
-
-İşbu sözleşmeden doğan uyuşmazlıklarda İSTANBUL (ÇAĞLAYAN) MAHKEMELERİ VE İCRA MÜDÜRLÜKLERİ yetkilidir.
-
-═══════════════════════════════════════════════════
-
-MADDE 12 - YÜRÜRLÜK
-
-İşbu sözleşme, ALICI tarafından elektronik ortamda onaylandığı tarihte yürürlüğe girer. Sözleşme, hizmetin tamamlanması ve ödemenin yapılmasıyla sona erer.
-
-ALICI, işbu sözleşmenin tüm koşullarını okuduğunu, anladığını ve kabul ettiğini beyan eder.
-
-═══════════════════════════════════════════════════
-
-FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
-Mersis: 0388195898700001
-Ticaret Sicil: 1105910
+Kabul etmekle bu şartları onaylamış bulunmaktasınız.
         ''';
         break;
       default:
@@ -6304,7 +6131,7 @@ Ticaret Sicil: 1105910
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '60km menzil içindeki çevrimiçi valeler yakından uzağa sıralanmıştır.',
+                        '100km menzil içindeki çevrimiçi valeler yakından uzağa sıralanmıştır.',
                         style: TextStyle(
                           fontSize: 14,
                           color: themeProvider.isDarkMode ? Colors.grey[300] : Colors.grey[700],
@@ -6403,7 +6230,7 @@ Ticaret Sicil: 1105910
       final result = await adminApi.getOnlineDrivers(
         pickupLat: _pickupLocation?.latitude,
         pickupLng: _pickupLocation?.longitude,
-        maxDistance: 60.0, // 60km menzil
+        maxDistance: 100.0, // 100km menzil
       );
       
       print('📊 === SÜRÜCÜ API SONUCU ===');
@@ -6779,16 +6606,13 @@ Ticaret Sicil: 1105910
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
       // YENİ RideService ile talep oluştur - ADRES + KOORDİNAT!
-      // SERVER TIME KULLAN!
-      final correctScheduledTime = await _getCorrectScheduledTime();
-      
       final result = await RideService.createRideRequest(
         customerId: int.tryParse(authProvider.customerId ?? '1') ?? 1,
         pickupLocation: _pickupAddress,
         destination: _destinationAddress,
         serviceType: _selectedServiceType,
         requestType: _selectedTimeOption == 'Hemen' ? 'immediate_or_soon' : 'scheduled_later',
-        scheduledDateTime: correctScheduledTime?.toIso8601String() ?? '', // NULL ise boş string
+        scheduledDateTime: _selectedDateTime?.toIso8601String(),
         selectedDriverId: int.tryParse(selectedDriver['id']?.toString() ?? '0') ?? 0,
         estimatedPrice: _estimatedPrice,
         discountCode: _appliedDiscountCode,
@@ -7281,11 +7105,20 @@ Ticaret Sicil: 1105910
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // Geçmiş rezervasyonlara yönlendir
-              Navigator.pushNamed(context, '/reservations');
+              // 🔥 İlk borçlu yolculuğun ID'sini al ve ödeme ekranına yönlendir
+              final firstPendingRideId = rides.isNotEmpty ? rides.first['id'] : null;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReservationsScreen(
+                    initialTabIndex: 1, 
+                    pendingRideId: firstPendingRideId != null ? int.tryParse(firstPendingRideId.toString()) : null,
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFD700)),
-            child: const Text('Borça Git'),
+            child: const Text('Borca Git'),
           ),
         ],
       ),

@@ -52,6 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : const Color(0xFFF5F5F5),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text(
           'Ayarlar',
           style: TextStyle(
@@ -118,11 +119,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.grey[400],
-                    size: 16,
-                  ),
                 ],
               ),
             ),
@@ -182,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             _buildSettingTile(
-              icon: Icons.price_check,
+              icon: Icons.currency_lira,
               title: 'Fiyat Listesi',
               subtitle: 'Vale hizmet fiyatlarını görün',
               onTap: () {
@@ -878,14 +874,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _openTermsOfUse() async {
-    const url = 'https://funbreakvale.com/kullanim-sartlari.html';
+    const url = 'https://funbreakvale.com/kullanim-kosullari.html';
     
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
-            title: const Text('Kullanım Şartları'),
+            title: const Text('Kullanım Koşulları'),
             backgroundColor: const Color(0xFFFFD700),
             foregroundColor: Colors.black,
           ),

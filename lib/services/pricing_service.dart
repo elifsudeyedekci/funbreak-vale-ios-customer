@@ -307,6 +307,7 @@ class PricingService {
   }
 
   // Toplam fiyat hesaplama (güncellenmiş - rota mesafesi ile)
+  // ✅ HEM PICKUP HEM DESTINATION ÖZEL KONUMDAYsa İKİSİNİN TOPLAMI ALINIR!
   static Future<double> calculateTotalPrice({
     required double originLat,
     required double originLng,
@@ -344,13 +345,23 @@ class PricingService {
         totalPrice = calculateHourlyPrice(hours, pricingData['hourly_pricing']);
       }
       
-      // Özel konum ek ücreti
-      double locationFee = checkLocationPricing(
+      // ✅ ÖZEL KONUM EK ÜCRETİ - PICKUP + DESTINATION TOPLAMI!
+      double pickupLocationFee = checkLocationPricing(
+        originLat, 
+        originLng, 
+        pricingData['location_pricing']
+      );
+      double destinationLocationFee = checkLocationPricing(
         destinationLat, 
         destinationLng, 
         pricingData['location_pricing']
       );
-      totalPrice += locationFee;
+      double totalLocationFee = pickupLocationFee + destinationLocationFee;
+      totalPrice += totalLocationFee;
+      
+      if (totalLocationFee > 0) {
+        print('🗺️ ÖZEL KONUM TOPLAM: +₺$totalLocationFee (Pickup: ₺$pickupLocationFee, Destination: ₺$destinationLocationFee)');
+      }
       
       // Bekleme ücreti hesaplama
       if (waitingMinutes > 0 && settings != null) {

@@ -199,9 +199,56 @@ class SavedAddressesService {
     }
   }
   
-  // Adres güncelle
+  // Adres güncelle (Backend + Local)
   static Future<bool> updateAddress(SavedAddress updatedAddress) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final customerId = prefs.getString('admin_user_id') ?? prefs.getString('customer_id');
+      
+      // ✅ Backend'e güncelleme gönder
+      if (customerId != null && int.tryParse(updatedAddress.id) != null) {
+        try {
+          final response = await http.post(
+            Uri.parse('$baseUrl/update_saved_address.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'address_id': int.parse(updatedAddress.id),
+              'customer_id': int.parse(customerId),
+              'name': updatedAddress.name,
+              'address': updatedAddress.address,
+              'description': updatedAddress.description ?? '',
+              'latitude': updatedAddress.latitude,
+              'longitude': updatedAddress.longitude,
+              'type': updatedAddress.type.toString().split('.').last,
+              'is_favorite': updatedAddress.isFavorite ? 1 : 0,
+            }),
+          ).timeout(const Duration(seconds: 10));
+          
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (data['success'] == true) {
+              print('✅ Adres backend\'de güncellendi: ${updatedAddress.name}');
+              
+              // Local cache'i de güncelle
+              final addresses = await getSavedAddresses();
+              int index = addresses.indexWhere((addr) => addr.id == updatedAddress.id);
+              if (index != -1) {
+                addresses[index] = updatedAddress;
+                final addressesJson = json.encode(addresses.map((addr) => addr.toJson()).toList());
+                await prefs.setString(_savedAddressesKey, addressesJson);
+              }
+              
+              return true;
+            } else {
+              print('⚠️ Backend güncelleme başarısız: ${data['message']}');
+            }
+          }
+        } catch (e) {
+          print('⚠️ Backend güncelleme hatası: $e');
+        }
+      }
+      
+      // Fallback: Sadece local'i güncelle
       final addresses = await getSavedAddresses();
       
       int index = addresses.indexWhere((addr) => addr.id == updatedAddress.id);
@@ -213,18 +260,17 @@ class SavedAddressesService {
       
       addresses[index] = updatedAddress;
       
-      final prefs = await SharedPreferences.getInstance();
       final addressesJson = json.encode(addresses.map((addr) => addr.toJson()).toList());
       
       bool success = await prefs.setString(_savedAddressesKey, addressesJson);
       
       if (success) {
-        print('Adres güncellendi: ${updatedAddress.name}');
+        print('📱 Adres local\'de güncellendi: ${updatedAddress.name}');
       }
       
       return success;
     } catch (e) {
-      print('Adres güncelleme hatası: $e');
+      print('❌ Adres güncelleme hatası: $e');
       return false;
     }
   }

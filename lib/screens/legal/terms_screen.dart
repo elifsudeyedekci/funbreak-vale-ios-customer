@@ -142,77 +142,170 @@ class TermsScreen extends StatelessWidget {
   String _getTurkishContent() {
     if (termsType == 'conditions') {
       return '''
-ÖN BİLGİLENDİRME KOŞULLARI
+ÖN BİLGİLENDİRME FORMU
 
-1. HİZMET TANIMI
-FunBreak Vale, müşterilerimize profesyonel şoför hizmeti sunan bir platformdur. Hizmetimiz kapsamında:
-- Kişisel şoför hizmeti
-- Saatlik paket hizmetleri
-- Özel etkinlik transferleri
-- Havalimanı transfer hizmetleri
+SATICI BİLGİLERİ
+Ticaret Unvanı: FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
+Mersis No: 0388195898700001
+Ticaret Sicil No: 1105910
+Adres: Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
+Telefon: 0533 448 82 53
+E-posta: info@funbreakvale.com
+Web Sitesi: www.funbreakvale.com
 
-2. FİYATLANDIRMA
-- Fiyatlarımız mesafe bazlı hesaplanır
-- Trafik yoğunluğu fiyata etki eder
-- Bekleme süreleri için ek ücret alınır
-- Özel konumlar için ek ücret uygulanabilir
+1. HİZMETİN TEMEL NİTELİKLERİ
+FunBreak Vale, profesyonel vale ve özel şoför hizmeti sunan bir mobil uygulama platformudur.
 
-3. ÖDEME KOŞULLARI
-- Ödeme hizmet tamamlandıktan sonra yapılır
-- Kredi kartı ve nakit ödemeler kabul edilir
-- İndirim kodları geçerli olduğu durumlarda uygulanır
+Hizmet Türleri:
+• Anında Vale Hizmeti: Bulunduğunuz konumdan aracınızı belirlediğiniz noktaya götürme
+• Saatlik Paket: Belirli süreler için özel şoför hizmeti
+• Rezervasyon: İleri tarihli hizmet planlama
 
-4. İPTAL KOŞULLARI
-- Hizmet başlamadan 30 dakika öncesine kadar ücretsiz iptal
-- Geç iptal durumunda %50 ücret alınır
-- Hizmet başladıktan sonra iptal edilemez
+2. HİZMET BEDELİ VE ÖDEME KOŞULLARI
 
-5. SORUMLULUKLARIMIZ
-- Güvenli ve konforlu ulaşım
-- Deneyimli ve güvenilir şoförler
-- 7/24 müşteri hizmetleri
-- Sigortalı araç ve hizmet
+Mesafe Bazlı Fiyatlandırma:
+• 0-5 km: 1.500 TL
+• 5-10 km: 1.700 TL
+• 10-15 km: 1.900 TL
+• 15-20 km: 2.100 TL
+• 20-25 km: 2.300 TL
+• 25-30 km: 2.500 TL
+• 30-35 km: 2.700 TL
+• 35-40 km: 2.900 TL
 
-6. MÜŞTERİ SORUMLULUKLARI
-- Doğru adres bilgisi verme
-- Zamanında hazır olma
-- Ödeme yükümlülüğü
-- Hizmet kurallarına uyma
+Saatlik Paketler:
+• 0-4 Saat: 3.000 TL
+• 4-8 Saat: 4.500 TL
+• 8-12 Saat: 6.000 TL
 
-Bu koşulları kabul ederek hizmetimizi kullanmayı onaylıyorsunuz.
+Bekleme Ücreti:
+• İlk 15 dakika: Ücretsiz
+• Sonraki her 15 dakika: 200 TL
+
+Özel Konum Ücreti:
+Havalimanı, marina ve benzeri lokasyonlarda ek ücret uygulanabilir.
+
+Ödeme Yöntemleri: Kredi kartı, banka kartı, havale/EFT
+
+3. TESLİMAT VE İFA KOŞULLARI
+• Hizmet, müşterinin belirttiği adresten başlar
+• Vale, müşterinin aracını teslim alarak hedef konuma götürür
+• Hizmet tamamlandığında araç müşteriye teslim edilir
+• Konum takibi uygulama üzerinden yapılabilir
+
+4. CAYMA HAKKI
+6502 sayılı Tüketicinin Korunması Hakkında Kanun uyarınca:
+• 45 dakika veya daha fazla kala iptal: Ücretsiz
+• 45 dakikadan az kala iptal: 1.500 TL iptal ücreti
+• Hizmet başladıktan sonra cayma hakkı kullanılamaz
+
+5. ŞİKAYET VE İTİRAZ
+Şikayetleriniz için:
+• E-posta: info@funbreakvale.com
+• Telefon: 0533 448 82 53
+• Uygulama içi destek
+
+6. YETKİLİ MAHKEME
+Uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri ve İcra Müdürlükleri yetkilidir.
+
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0
 ''';
     } else {
       return '''
 MESAFELİ SATIŞ SÖZLEŞMESİ
 
-SATICI FİRMA BİLGİLERİ:
-Ticaret Unvanı: FunBreak Vale Hizmetleri Ltd. Şti.
-Adres: İstanbul, Türkiye
-Telefon: +90 555 123 45 67
+1. TARAFLAR
+
+SATICI:
+Ticaret Unvanı: FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
+Mersis No: 0388195898700001
+Ticaret Sicil No: 1105910
+Adres: Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
+Telefon: 0533 448 82 53
 E-posta: info@funbreakvale.com
 Web: www.funbreakvale.com
 
-MÜŞTERİ HAKLARI:
-1. Cayma Hakkı: Hizmet başlamadan 30 dakika öncesine kadar cayma hakkınız vardır.
-2. Bilgi Alma: Hizmet detayları hakkında bilgi alma hakkınız vardır.
-3. Şikayet: Hizmetle ilgili şikayetlerinizi iletme hakkınız vardır.
+ALICI (MÜŞTERİ):
+Ad Soyad: [Uygulama kaydındaki bilgiler]
+Telefon: [Kayıtlı telefon numarası]
+E-posta: [Kayıtlı e-posta adresi]
 
-HİZMET DETAYLARI:
-- Hizmet türü: Kişisel şoför/vale hizmeti
-- Hizmet süresi: Seçilen paket/mesafeye göre
-- Hizmet alanı: İstanbul şehri sınırları içi
-- Ödeme: Hizmet sonrası nakit veya kredi kartı
+2. SÖZLEŞMENİN KONUSU
+İşbu sözleşme, 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği hükümleri uyarınca tarafların hak ve yükümlülüklerini düzenler.
 
-CAYMA HAKKI:
-6502 sayılı Tüketicinin Korunması Hakkında Kanun gereğince:
-- Hizmet başlamadan önce cayma hakkınız vardır
-- Cayma için müşteri hizmetlerini arayın
-- Geç cayma durumunda ücret kesintisi yapılabilir
+3. HİZMETİN TEMEL NİTELİKLERİ
+FunBreak Vale, profesyonel vale ve özel şoför hizmeti sunan bir mobil uygulama platformudur.
 
-UYUŞMAZLIK ÇÖZÜMÜ:
-Hizmetle ilgili uyuşmazlıklar İstanbul Mahkemeleri ve İcra Müdürlüklerinin yetkisindedir.
+Sunulan Hizmetler:
+• Anında Vale Hizmeti
+• Saatlik Paket Hizmeti
+• Rezervasyon Hizmeti
+• Havalimanı Transfer Hizmeti
 
-Bu sözleşmeyi kabul ederek hizmetimizi satın almayı onaylıyorsunuz.
+4. HİZMET BEDELİ
+
+4.1. Mesafe Bazlı Fiyatlandırma:
+• 0-5 km: 1.500 TL
+• 5-10 km: 1.700 TL
+• 10-15 km: 1.900 TL
+• 15-20 km: 2.100 TL
+• 20-25 km: 2.300 TL
+• 25-30 km: 2.500 TL
+• 30-35 km: 2.700 TL
+• 35-40 km: 2.900 TL
+
+4.2. Saatlik Paketler:
+• 0-4 Saat: 3.000 TL
+• 4-8 Saat: 4.500 TL
+• 8-12 Saat: 6.000 TL
+
+4.3. Bekleme Ücreti:
+İlk 15 dakika ücretsiz, sonraki her 15 dakika 200 TL
+
+4.4. Tüm fiyatlar Türk Lirası cinsinden ve KDV dahildir.
+
+5. ÖDEME ŞEKLİ
+• Kredi Kartı / Banka Kartı
+• Havale / EFT
+• Ödeme, hizmet tamamlandıktan sonra tahsil edilir
+
+6. TESLİMAT
+• Hizmet, müşterinin belirttiği adreste başlar
+• Vale, aracı teslim alır ve belirlenen konuma götürür
+• Hizmet tamamlanma süresi trafik koşullarına göre değişebilir
+
+7. CAYMA HAKKI
+
+7.1. Tüketici, hizmet başlamadan önce cayma hakkına sahiptir.
+
+7.2. Cayma Koşulları:
+• 45 dakika veya daha fazla kala: Ücretsiz iptal
+• 45 dakikadan az kala: 1.500 TL iptal ücreti uygulanır
+
+7.3. Hizmet başladıktan sonra cayma hakkı kullanılamaz (6502 sayılı Kanun m.15/ğ).
+
+7.4. Cayma bildirimi için:
+• E-posta: info@funbreakvale.com
+• Telefon: 0533 448 82 53
+• Uygulama içi iptal butonu
+
+8. GENEL HÜKÜMLER
+
+8.1. Satıcı, hizmet kalitesi için azami özeni gösterir.
+
+8.2. Mücbir sebep hallerinde (doğal afet, savaş, grev vb.) satıcı sorumlu tutulamaz.
+
+8.3. Araç içinde bırakılan değerli eşyalardan satıcı sorumlu değildir.
+
+9. UYUŞMAZLIK ÇÖZÜMÜ
+İşbu sözleşmeden doğan uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri ve İcra Müdürlükleri yetkilidir.
+
+10. YÜRÜRLÜK
+Bu sözleşme, müşterinin elektronik ortamda onay vermesiyle yürürlüğe girer.
+
+İşbu sözleşme, Ön Bilgilendirme Formu ile birlikte geçerlidir.
+
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0
 ''';
     }
   }

@@ -259,11 +259,21 @@ class AdvancedNotificationService {
           badge: true,
           sound: true,
         );
-        final apnsToken = await _messaging!.getAPNSToken();
-        if (apnsToken != null) {
-          print('📱 APNs token alındı: ${apnsToken.substring(0, apnsToken.length > 12 ? 12 : apnsToken.length)}...');
-        } else {
-          print('⚠️ APNs token alınamadı (null döndü)');
+        
+        // 🔄 iOS APNs TOKEN BEKLEME - FCM token için ZORUNLU!
+        String? apnsToken;
+        for (int i = 0; i < 10; i++) {
+          apnsToken = await _messaging!.getAPNSToken();
+          if (apnsToken != null) {
+            print('📱 APNs token alındı (deneme ${i + 1}): ${apnsToken.substring(0, apnsToken.length > 12 ? 12 : apnsToken.length)}...');
+            break;
+          }
+          print('⏳ APNs token bekleniyor... (${i + 1}/10)');
+          await Future.delayed(Duration(seconds: 1));
+        }
+        
+        if (apnsToken == null) {
+          print('⚠️ APNs token 10 saniye içinde alınamadı - FCM token alınamayabilir!');
         }
       }
       
@@ -281,7 +291,7 @@ class AdvancedNotificationService {
           print('✅ FCM Token alındı: ${token.substring(0, 30)}...');
           await _updateTokenOnServer(token);
         } else {
-          print('⚠️ FCM token null döndü');
+          print('⚠️ FCM token null döndü - iOS APNs token sorunu olabilir');
         }
       } catch (e) {
         print('❌ FCM token alma hatası: $e');
@@ -404,7 +414,6 @@ class AdvancedNotificationService {
               presentList: true,   // Notification Center'da göster
               presentBadge: true,
               presentSound: true,
-              sound: 'notification.caf',
               badgeNumber: 1,
               subtitle: message.data['type'] ?? '',
               threadIdentifier: 'funbreak_vale',
@@ -559,7 +568,18 @@ class AdvancedNotificationService {
   static Future<void> _updateTokenOnServer(String token) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? '0';
+      
+      // 🔍 user_id VEYA admin_user_id VEYA customer_id - hepsini dene!
+      String userId = prefs.getString('user_id') ?? 
+                      prefs.getString('admin_user_id') ?? 
+                      prefs.getInt('customer_id')?.toString() ?? '0';
+      
+      if (userId == '0') {
+        print('⚠️ FCM Token kaydetme atlandı - kullanıcı ID bulunamadı');
+        return;
+      }
+      
+      print('📤 FCM Token backend\'e gönderiliyor... (userId: $userId)');
       
       final response = await http.post(
         Uri.parse('$baseUrl/update_fcm_token.php'),
@@ -572,7 +592,14 @@ class AdvancedNotificationService {
       );
       
       if (response.statusCode == 200) {
-        print('✅ FCM Token sunucuya güncellendi');
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ FCM Token sunucuya kaydedildi! (userId: $userId)');
+        } else {
+          print('⚠️ FCM Token kayıt yanıtı: ${data['message'] ?? 'bilinmiyor'}');
+        }
+      } else {
+        print('❌ FCM Token kayıt HTTP hatası: ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Token güncelleme hatası: $e');
