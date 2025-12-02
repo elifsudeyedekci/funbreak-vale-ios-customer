@@ -189,10 +189,12 @@ class _RideChatScreenState extends State<RideChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.isDriver ? 'Müşteri' : widget.driverName,
+                  // ✅ FIX: Boş ise fallback göster
+                  widget.isDriver ? 'Müşteri' : (widget.driverName.isNotEmpty ? widget.driverName : 'Şoförünüz'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
                 const Text(
@@ -953,7 +955,12 @@ class _RideChatScreenState extends State<RideChatScreen> {
       
       if (latitude == null || longitude == null) return;
       
-      final locationMessage = '📍 $locationName: https://www.google.com/maps?q=$latitude,$longitude';
+      // ✅ JSON formatında gönder - karşı taraf düzgün parse edebilsin!
+      final locationJson = json.encode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'name': locationName ?? 'Konum',
+      });
       
       print('📍 Konum paylaşılıyor: $locationName ($latitude, $longitude)');
       
@@ -961,18 +968,19 @@ class _RideChatScreenState extends State<RideChatScreen> {
       setState(() {
         _messages.add({
           'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'message': locationMessage,
+          'message': locationJson,
           'sender_type': 'customer',
           'timestamp': DateTime.now(),
           'type': 'location',
           'latitude': latitude,
           'longitude': longitude,
+          'locationName': locationName,
         });
       });
       _scrollToBottom();
       
-      // API'ye gönder
-      await _sendMessageToAPI(locationMessage, 'location');
+      // API'ye gönder - JSON formatında
+      await _sendMessageToAPI(locationJson, 'location');
       print('📍 Konum paylaşıldı!');
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1610,7 +1618,11 @@ class _RideChatScreenState extends State<RideChatScreen> {
         return;
       }
       
-      if (await File(audioPath).exists()) {
+      // ✅ FIX: URL veya yerel dosya kontrolü
+      final isUrl = audioPath.startsWith('http://') || audioPath.startsWith('https://');
+      final canPlay = isUrl || await File(audioPath).exists();
+      
+      if (canPlay) {
         setState(() {
           _currentlyPlayingId = messageId;
           _playbackProgress = 0.0;
@@ -1635,8 +1647,9 @@ class _RideChatScreenState extends State<RideChatScreen> {
           }
         });
         
-        // Ses mesajı oynatılıyor
+        print('🎵 Ses çalınıyor: $audioPath');
       } else {
+        print('❌ Ses dosyası bulunamadı: $audioPath');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('❌ Ses dosyası bulunamadı')),

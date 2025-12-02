@@ -205,39 +205,56 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     final serviceType = widget.rideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
     final isHourlyPackage = (serviceType == 'hourly');
     
-    // SAATLİK PAKET BİLGİSİNİ BELİRLE
+    // SAATLİK PAKET BİLGİSİNİ BELİRLE - final_price ÖNCELİKLİ!
     if (isHourlyPackage) {
-      final rideDurationHours = widget.rideStatus['ride_duration_hours'];
-      if (rideDurationHours != null) {
-        final hours = double.tryParse(rideDurationHours.toString()) ?? 0.0;
-        final estimatedPrice = double.tryParse(widget.rideDetails['estimated_price']?.toString() ?? '0') ?? 0.0;
-        
-        // Fiyata göre paket belirle
-        if (estimatedPrice == 3000) {
-          _hourlyPackageLabel = '0-4 Saat Paketi';
-        } else if (estimatedPrice == 4500) {
-          _hourlyPackageLabel = '4-8 Saat Paketi';
-        } else if (estimatedPrice == 6000) {
-          _hourlyPackageLabel = '8-12 Saat Paketi';
-        } else if (estimatedPrice == 18000) {
-          _hourlyPackageLabel = '12-20 Saat Paketi';
-        } else if (estimatedPrice == 26000) {
-          _hourlyPackageLabel = '20-50 Saat Paketi';
-        } else {
-          _hourlyPackageLabel = 'Saatlik Paket (${hours.toStringAsFixed(1)} saat)';
-        }
+      // ✅ KRİTİK: final_price varsa KULLANILAN SÜREYE GÖRE PAKETİ BELİRLE!
+      final finalPrice = widget.rideStatus['final_price'];
+      final priceToCheck = (finalPrice != null && finalPrice > 0) 
+          ? double.tryParse(finalPrice.toString()) ?? estimatedPrice
+          : estimatedPrice;
+      
+      // Fiyata göre paket belirle - KULLANILAN SÜREYE GÖRE!
+      if (priceToCheck == 3000) {
+        _hourlyPackageLabel = '0-4 Saat Paketi';
+      } else if (priceToCheck == 4500) {
+        _hourlyPackageLabel = '4-8 Saat Paketi';
+      } else if (priceToCheck == 6000) {
+        _hourlyPackageLabel = '8-12 Saat Paketi';
+      } else if (priceToCheck == 18000) {
+        _hourlyPackageLabel = '12-20 Saat Paketi';
+      } else if (priceToCheck == 26000) {
+        _hourlyPackageLabel = '20-50 Saat Paketi';
       } else {
-        _hourlyPackageLabel = 'Saatlik Paket';
+        final rideDurationHours = widget.rideStatus['ride_duration_hours'];
+        if (rideDurationHours != null) {
+          final hours = double.tryParse(rideDurationHours.toString()) ?? 0.0;
+          _hourlyPackageLabel = 'Saatlik Paket (${hours.toStringAsFixed(1)} saat)';
+        } else {
+          _hourlyPackageLabel = 'Saatlik Paket';
+        }
       }
+      
+      print('📦 PAKET ETİKETİ: $_hourlyPackageLabel (final_price: $finalPrice, estimated: $estimatedPrice)');
     }
     
     // ✅ FİYAT HESAPLAMA - SAATLİK PAKET vs NORMAL YOLCULUK
     if (isHourlyPackage) {
-      // SAATLİK PAKET - Sabit fiyat, bekleme yok, KM yok
-      _basePrice = estimatedPrice;
+      // ✅ KRİTİK FIX: SAATLİK PAKETTE DE final_price ÖNCELİKLİ!
+      // complete_ride.php KULLANILAN SÜREYE göre hesaplıyor!
+      final finalPrice = widget.rideStatus['final_price'];
+      
+      if (finalPrice != null && finalPrice > 0) {
+        // Backend hesapladı - KULLANILAN SÜREYE göre paket fiyatı!
+        _totalPrice = double.tryParse(finalPrice.toString()) ?? estimatedPrice;
+        print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Backend final_price: ₺${_totalPrice.toStringAsFixed(2)} (Seçilen: ₺${estimatedPrice.toStringAsFixed(2)})');
+      } else {
+        // Backend henüz hesaplamamış - seçilen paketi göster (geçici)
+        _totalPrice = estimatedPrice;
+        print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Seçilen fiyat: ₺${_totalPrice.toStringAsFixed(2)}');
+      }
+      
+      _basePrice = _totalPrice;
       _waitingFee = 0.0;
-      _totalPrice = estimatedPrice;
-      print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Sabit fiyat: ₺${_totalPrice.toStringAsFixed(2)}');
     } else {
       // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
       // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!

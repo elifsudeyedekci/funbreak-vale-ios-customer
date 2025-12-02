@@ -1414,13 +1414,20 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   if (mounted) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) {
-                        // GÜNCEL TUTAR VE TÜM BİLGİLERİ AL - Backend'den!
-                        final currentTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
+                        // ✅ KRİTİK FIX: Backend'den gelen final_price'ı kullan!
+                        // complete_ride.php KULLANILAN SÜREYE GÖRE hesapladı!
+                        final backendFinalPrice = _currentRideStatus['final_price'];
+                        final currentTotal = (backendFinalPrice != null && backendFinalPrice > 0) 
+                            ? double.tryParse(backendFinalPrice.toString()) ?? 0.0
+                            : double.tryParse(_calculateCurrentTotal()) ?? 0.0;
                         
                         // GÜNCEL ride status'ı oluştur - Backend'den gelen TÜM bilgilerle!
                         final completedRideStatus = Map<String, dynamic>.from(_currentRideStatus);
                         completedRideStatus['status'] = 'completed';
+                        // Backend final_price öncelikli - saatlik pakette kullanılan süreye göre hesaplanmış!
                         completedRideStatus['final_price'] = currentTotal > 0 ? currentTotal : (_currentRideStatus['estimated_price'] ?? widget.rideDetails['estimated_price'] ?? 0);
+                        
+                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Backend final_price: $backendFinalPrice, Kullanılan: ${completedRideStatus['final_price']}');
                         
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
@@ -3032,6 +3039,22 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   void _updateRoutePolyline() {
     if (_driverLocation == null || _customerLocation == null) return;
     
+    // ✅ SULTANAHMET (VARSAYILAN) KONTROLÜ - Gerçek konum değilse rota çizme!
+    final bool isDriverLocationValid = 
+        (_driverLocation!.latitude != 41.0082 || _driverLocation!.longitude != 28.9784) && // Sultanahmet değil
+        (_driverLocation!.latitude != 0 && _driverLocation!.longitude != 0) && // 0,0 değil
+        (_driverLocation!.latitude > 35 && _driverLocation!.latitude < 43 && 
+         _driverLocation!.longitude > 25 && _driverLocation!.longitude < 45); // Türkiye sınırları
+    
+    if (!isDriverLocationValid) {
+      print('⚠️ [MÜŞTERİ] Sürücü konumu geçersiz/varsayılan - rota çizilmeyecek');
+      // Mevcut rotayı temizle
+      setState(() {
+        _polylines = {};
+      });
+      return;
+    }
+    
     // Şoför konumu önemli ölçüde değiştiyse yeni rota çek (50 metre)
     if (_lastDriverLocationForRoute == null || 
         _haversineDistance(
@@ -3040,6 +3063,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
           _driverLocation!.latitude,
           _driverLocation!.longitude
         ) > 0.05) { // 50 metre
+      print('🛣️ [MÜŞTERİ] Rota güncelleniyor - sürücü ${(_haversineDistance(_lastDriverLocationForRoute?.latitude ?? 0, _lastDriverLocationForRoute?.longitude ?? 0, _driverLocation!.latitude, _driverLocation!.longitude) * 1000).toStringAsFixed(0)}m hareket etti');
       _fetchRouteFromDirectionsAPI();
     } else {
       // Mevcut rota ile güncelle
@@ -3222,7 +3246,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
             // Telefon Butonu - ŞİRKETİ ARA POPUP!
             _buildBottomBarItem(
               icon: Icons.phone,
-              label: 'Ara',
+              label: 'Şirketi Ara',
               isActive: false,
               onTap: () => _showCompanyCallPopup(),
             ),
