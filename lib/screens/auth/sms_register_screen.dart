@@ -32,7 +32,18 @@ class _SmsRegisterScreenState extends State<SmsRegisterScreen> {
   void initState() {
     super.initState();
     if (widget.prefilledPhone != null) {
-      _phoneController.text = widget.prefilledPhone!;
+      String phone = widget.prefilledPhone!;
+      // Sadece rakamları al
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      // 90 ile başlıyorsa kaldır (ülke kodu)
+      if (phone.startsWith('90') && phone.length >= 12) {
+        phone = phone.substring(2);
+      }
+      // Başındaki 0'ı kaldır (prefixText zaten 0 gösteriyor)
+      if (phone.startsWith('0')) {
+        phone = phone.substring(1);
+      }
+      _phoneController.text = phone;
     }
   }
 

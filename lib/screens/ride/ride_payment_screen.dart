@@ -55,6 +55,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
   
   // SAATLİK PAKET BİLGİSİ
   String _hourlyPackageLabel = '';
+  List<Map<String, dynamic>> _cachedHourlyPackages = []; // Panel'den çekilen saatlik paketler
   
   // ÖZEL KONUM BİLGİSİ
   Map<String, dynamic>? _specialLocation;
@@ -143,7 +144,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     try {
       // Panel'den fiyatlandırma ayarlarını çek
       final response = await http.get(
-        Uri.parse('https://admin.funbreakvale.com/api/get_pricing_settings.php'),
+        Uri.parse('https://admin.funbreakvale.com/api/get_pricing_info.php'),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -159,14 +160,110 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
           
           print('✅ MÜŞTERİ ÖDEME: Panel ayarları çekildi - İlk $_waitingFreeMinutes dk ücretsiz, sonra her $_waitingIntervalMinutes dk ₺$_waitingFeePerInterval');
         }
+        
+        // Saatlik paketleri de çek (varsa)
+        if (data['hourly_packages'] != null) {
+          final packages = data['hourly_packages'] as List;
+          _cachedHourlyPackages = packages.map((pkg) => {
+            'start': double.tryParse(pkg['start_hour']?.toString() ?? pkg['min_value']?.toString() ?? '0') ?? 0.0,
+            'end': double.tryParse(pkg['end_hour']?.toString() ?? pkg['max_value']?.toString() ?? '0') ?? 0.0,
+            'price': double.tryParse(pkg['price']?.toString() ?? '0') ?? 0.0,
+          }).toList();
+          print('📦 MÜŞTERİ ÖDEME: ${_cachedHourlyPackages.length} saatlik paket yüklendi');
+        }
       }
     } catch (e) {
       print('⚠️ MÜŞTERİ ÖDEME: Panel ayar çekme hatası, varsayılan kullanılıyor: $e');
       // Varsayılan değerler zaten set edildi
     }
     
+    // Saatlik paketler yüklenmediyse ayrı çek
+    if (_cachedHourlyPackages.isEmpty) {
+      await _loadHourlyPackages();
+    }
+    
     // Hesaplamayı yap
     _calculateTripDetails();
+  }
+  
+  // SAATLİK PAKETLERİ PANEL'DEN ÇEK
+  Future<void> _loadHourlyPackages() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://admin.funbreakvale.com/api/get_hourly_packages.php'),
+      ).timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['packages'] != null) {
+          final packages = data['packages'] as List;
+          _cachedHourlyPackages = packages.map((pkg) => {
+            'start': double.tryParse(pkg['start_hour']?.toString() ?? '0') ?? 0.0,
+            'end': double.tryParse(pkg['end_hour']?.toString() ?? '0') ?? 0.0,
+            'price': double.tryParse(pkg['price']?.toString() ?? '0') ?? 0.0,
+          }).toList();
+          print('📦 MÜŞTERİ ÖDEME: ${_cachedHourlyPackages.length} saatlik paket yüklendi (ayrı API)');
+        }
+      }
+    } catch (e) {
+      print('⚠️ MÜŞTERİ ÖDEME: Saatlik paket yükleme hatası: $e');
+    }
+  }
+  
+  // KULLANILAN SÜREYE GÖRE SAATLİK PAKET FİYATI BUL
+  double _getHourlyPackagePriceByDuration(double usedHours) {
+    // Varsayılan paketler (cache boşsa)
+    if (_cachedHourlyPackages.isEmpty) {
+      if (usedHours <= 4) return 3000;
+      if (usedHours <= 8) return 4500;
+      if (usedHours <= 12) return 6000;
+      if (usedHours <= 20) return 18000;
+      return 26000;
+    }
+    
+    // Cache'den kullanılan süreye göre paket bul
+    for (final pkg in _cachedHourlyPackages) {
+      final start = pkg['start'] as double;
+      final end = pkg['end'] as double;
+      final price = pkg['price'] as double;
+      
+      if (usedHours > start && usedHours <= end) {
+        return price;
+      }
+    }
+    
+    // Hiçbiri uymazsa en yüksek paketi döndür
+    if (_cachedHourlyPackages.isNotEmpty) {
+      double maxPrice = 0;
+      for (final pkg in _cachedHourlyPackages) {
+        final price = pkg['price'] as double;
+        if (price > maxPrice) maxPrice = price;
+      }
+      return maxPrice;
+    }
+    
+    return 26000; // Fallback
+  }
+  
+  // FİYATA GÖRE PAKET ETİKETİ BUL
+  String _getHourlyPackageLabelByPrice(double price) {
+    if (price == 3000) return '0-4 Saat Paketi';
+    if (price == 4500) return '4-8 Saat Paketi';
+    if (price == 6000) return '8-12 Saat Paketi';
+    if (price == 18000) return '12-20 Saat Paketi';
+    if (price == 26000) return '20-50 Saat Paketi';
+    
+    // Cache'den eşleşen paketi bul
+    for (final pkg in _cachedHourlyPackages) {
+      final pkgPrice = pkg['price'] as double;
+      if (pkgPrice == price) {
+        final start = (pkg['start'] as double).toInt();
+        final end = (pkg['end'] as double).toInt();
+        return '$start-$end Saat Paketi';
+      }
+    }
+    
+    return 'Saatlik Paket';
   }
   
   void _calculateTripDetails() {
@@ -239,8 +336,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     
     // ✅ FİYAT HESAPLAMA - SAATLİK PAKET vs NORMAL YOLCULUK
     if (isHourlyPackage) {
-      // ✅ KRİTİK FIX: SAATLİK PAKETTE DE final_price ÖNCELİKLİ!
-      // complete_ride.php KULLANILAN SÜREYE göre hesaplıyor!
+      // ✅ KRİTİK FIX: SAATLİK PAKETTE KULLANILAN SÜREYE göre fiyat hesapla!
       final finalPrice = widget.rideStatus['final_price'];
       
       if (finalPrice != null && finalPrice > 0) {
@@ -248,9 +344,22 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         _totalPrice = double.tryParse(finalPrice.toString()) ?? estimatedPrice;
         print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Backend final_price: ₺${_totalPrice.toStringAsFixed(2)} (Seçilen: ₺${estimatedPrice.toStringAsFixed(2)})');
       } else {
-        // Backend henüz hesaplamamış - seçilen paketi göster (geçici)
-        _totalPrice = estimatedPrice;
-        print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Seçilen fiyat: ₺${_totalPrice.toStringAsFixed(2)}');
+        // ✅ Backend henüz hesaplamamış - KULLANILAN SÜREYE GÖRE LOCAL HESAPLA!
+        final rideDurationHours = widget.rideStatus['ride_duration_hours'] ?? 
+                                  widget.rideDetails['ride_duration_hours'];
+        
+        if (rideDurationHours != null) {
+          final usedHours = double.tryParse(rideDurationHours.toString()) ?? 0.0;
+          _totalPrice = _getHourlyPackagePriceByDuration(usedHours);
+          print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Kullanılan süre: ${usedHours.toStringAsFixed(1)} saat → ₺${_totalPrice.toStringAsFixed(0)} (Seçilen: ₺${estimatedPrice.toStringAsFixed(0)})');
+          
+          // Paket etiketini güncelle
+          _hourlyPackageLabel = _getHourlyPackageLabelByPrice(_totalPrice);
+        } else {
+          // Süre bilgisi de yoksa seçilen paketi kullan (geçici)
+          _totalPrice = estimatedPrice;
+          print('📦 MÜŞTERİ ÖDEME: SAATLİK PAKET - Süre bilgisi yok, seçilen fiyat: ₺${_totalPrice.toStringAsFixed(2)}');
+        }
       }
       
       _basePrice = _totalPrice;
