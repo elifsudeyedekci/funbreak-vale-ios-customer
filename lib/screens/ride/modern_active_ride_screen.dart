@@ -1530,8 +1530,11 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                         completedRideStatus['waiting_minutes'] = _getWaitingMinutes(); // Güncel bekleme
                         completedRideStatus['ride_duration_hours'] = _getUsedHours(); // Saatlik paket için süre
                         completedRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
+                        // ✅ ÖZEL KONUM ÜCRETİ - Backend'den gelen değeri kullan!
+                        completedRideStatus['location_extra_fee'] = _currentRideStatus['location_extra_fee'] ?? 0;
                         
-                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Güncel Tutar: ₺$currentTotal, KM: ${_getCurrentKm()}, Bekleme: ${_getWaitingMinutes()} dk, Süre: ${_getUsedHours().toStringAsFixed(1)} saat');
+                        final locationFee = _currentRideStatus['location_extra_fee'] ?? 0;
+                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Güncel Tutar: ₺$currentTotal, KM: ${_getCurrentKm()}, Bekleme: ${_getWaitingMinutes()} dk, Süre: ${_getUsedHours().toStringAsFixed(1)} saat, Özel Konum: ₺$locationFee');
                         
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
@@ -1694,6 +1697,8 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                 paymentRideStatus['waiting_minutes'] = _getWaitingMinutes();
                 paymentRideStatus['ride_duration_hours'] = _getUsedHours();
                 paymentRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
+                // ✅ ÖZEL KONUM ÜCRETİ - Backend'den gelen değeri kullan!
+                paymentRideStatus['location_extra_fee'] = _currentRideStatus['location_extra_fee'] ?? 0;
                 
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
