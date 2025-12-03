@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/customer_cards_api.dart';
+import 'card_payment_screen.dart'; // ✅ Modern kart ekleme ekranı
 
 // ÖDEME YÖNTEMLERİ EKRANI - VakıfBank 3D Secure Entegreli!
 // @version 2.0.0
@@ -444,22 +446,48 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
   }
 
-  // YENİ KART EKLEME DIALOG
-  void _showAddCardDialog({Map<String, dynamic>? editingCard}) {
+  // YENİ KART EKLEME - MODERN EKRANA YÖNLENDİR!
+  void _showAddCardDialog({Map<String, dynamic>? editingCard}) async {
+    // ✅ YENİ KART EKLEME - MODERN CardPaymentScreen'E GİT!
+    if (editingCard == null) {
+      final prefs = await SharedPreferences.getInstance();
+      final customerId = prefs.getString('user_id') ?? '0';
+      
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CardPaymentScreen(
+            rideId: 0, // Sadece kart kaydetme modu
+            customerId: int.tryParse(customerId) ?? 0,
+            amount: 0.01, // Minimum doğrulama tutarı
+            paymentType: 'card_save', // Sadece kart kaydetme
+            savedCardId: null,
+          ),
+        ),
+      );
+      
+      // Kart eklendiyse listeyi yenile
+      if (result == true) {
+        _loadCards();
+      }
+      return;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ESKİ KART DÜZENLEME - MEVCUT DIALOG (sadece düzenleme için)
+    // ═══════════════════════════════════════════════════════════════
     final cardNumberController = TextEditingController();
     final cardHolderController = TextEditingController();
     final expiryController = TextEditingController();
     final cvvController = TextEditingController();
     
-    if (editingCard != null) {
-      cardHolderController.text = editingCard['cardHolder'] ?? '';
-      expiryController.text = editingCard['expiryDate'] ?? '';
-    }
+    cardHolderController.text = editingCard['cardHolder'] ?? '';
+    expiryController.text = editingCard['expiryDate'] ?? '';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(editingCard != null ? 'Kartı Düzenle' : 'Yeni Kart Ekle'),
+        title: const Text('Kartı Düzenle'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

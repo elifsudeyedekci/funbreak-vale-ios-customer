@@ -1801,23 +1801,84 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   );
                 }).toList(),
               
-              const Divider(height: 1),
-              
-              // Yeni kart ekle
-              ListTile(
-                leading: const Icon(Icons.add_card, color: Color(0xFFFFD700)),
-                title: const Text('Yeni Kart Ekle', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  // Yeni kart ekle seçildiğinde, savedCardId null olarak CardPaymentScreen açılacak
-                  // Bu sayede kart numarası giriş ekranı gösterilecek
-                  if (mounted) {
-                    setState(() {
-                      _selectedPaymentMethod = 'card';
-                      _selectedCardId = null; // Yeni kart = savedCardId yok
-                    });
-                  }
-                },
+              // Yeni kart ekle - KAYITLI KARTLAR GİBİ GÖRÜNÜM!
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFFD700),
+                    width: 1.5,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: InkWell(
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    // ✅ DİREKT MODERN KART EKLEME EKRANINA GİT!
+                    final prefs = await SharedPreferences.getInstance();
+                    final customerId = prefs.getString('user_id') ?? '0';
+                    
+                    final result = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CardPaymentScreen(
+                          rideId: 0, // Sadece kart kaydetme modu
+                          customerId: int.tryParse(customerId) ?? 0,
+                          amount: 0.01, // Minimum doğrulama tutarı
+                          paymentType: 'card_save', // Sadece kart kaydetme
+                          savedCardId: null,
+                        ),
+                      ),
+                    );
+                    // Kart eklendiyse listeyi yenile
+                    if (result == true) {
+                      _loadSavedCards();
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      // + İkonu
+                      Container(
+                        width: 40,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD700),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      // Metin
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Yeni Kart Ekle',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '3D Secure ile güvenli kart kaydı',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Color(0xFFFFD700)),
+                    ],
+                  ),
+                ),
               ),
               
               const SizedBox(height: 20),

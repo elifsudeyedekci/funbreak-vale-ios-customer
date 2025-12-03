@@ -1512,20 +1512,26 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   if (mounted) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) {
-                        // ✅ KRİTİK FIX: Backend'den gelen final_price'ı kullan!
-                        // complete_ride.php KULLANILAN SÜREYE GÖRE hesapladı!
+                        // ✅ KRİTİK FIX: GÜNCEL HESAPLANAN TUTARI GÖNDER!
+                        // Backend'den gelen final_price varsa onu kullan, yoksa client hesaplasın
                         final backendFinalPrice = _currentRideStatus['final_price'];
+                        final calculatedTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
                         final currentTotal = (backendFinalPrice != null && backendFinalPrice > 0) 
-                            ? double.tryParse(backendFinalPrice.toString()) ?? 0.0
-                            : double.tryParse(_calculateCurrentTotal()) ?? 0.0;
+                            ? double.tryParse(backendFinalPrice.toString()) ?? calculatedTotal
+                            : calculatedTotal;
                         
-                        // GÜNCEL ride status'ı oluştur - Backend'den gelen TÜM bilgilerle!
+                        // GÜNCEL ride status'ı oluştur - TÜM GÜNCEL DEĞERLERİ EKLE!
                         final completedRideStatus = Map<String, dynamic>.from(_currentRideStatus);
                         completedRideStatus['status'] = 'completed';
-                        // Backend final_price öncelikli - saatlik pakette kullanılan süreye göre hesaplanmış!
-                        completedRideStatus['final_price'] = currentTotal > 0 ? currentTotal : (_currentRideStatus['estimated_price'] ?? widget.rideDetails['estimated_price'] ?? 0);
                         
-                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Backend final_price: $backendFinalPrice, Kullanılan: ${completedRideStatus['final_price']}');
+                        // ✅ KRİTİK: GÜNCEL DEĞERLERİ EKLE - Ödeme ekranı bunları kullanacak!
+                        completedRideStatus['final_price'] = currentTotal > 0 ? currentTotal : calculatedTotal;
+                        completedRideStatus['total_distance'] = _getCurrentKm(); // Güncel KM
+                        completedRideStatus['waiting_minutes'] = _getWaitingMinutes(); // Güncel bekleme
+                        completedRideStatus['ride_duration_hours'] = _getUsedHours(); // Saatlik paket için süre
+                        completedRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
+                        
+                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Güncel Tutar: ₺$currentTotal, KM: ${_getCurrentKm()}, Bekleme: ${_getWaitingMinutes()} dk, Süre: ${_getUsedHours().toStringAsFixed(1)} saat');
                         
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
@@ -1680,11 +1686,20 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
             if (status == 'completed') {
               _trackingTimer?.cancel();
               if (mounted) {
+                // ✅ GÜNCEL DEĞERLERİ EKLE - Ödeme ekranı doğru tutar göstersin!
+                final paymentRideStatus = Map<String, dynamic>.from(_currentRideStatus);
+                final calculatedTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
+                paymentRideStatus['final_price'] = paymentRideStatus['final_price'] ?? calculatedTotal;
+                paymentRideStatus['total_distance'] = _getCurrentKm();
+                paymentRideStatus['waiting_minutes'] = _getWaitingMinutes();
+                paymentRideStatus['ride_duration_hours'] = _getUsedHours();
+                paymentRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
+                
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
                     builder: (context) => RidePaymentScreen(
                       rideDetails: Map<String, dynamic>.from(widget.rideDetails),
-                      rideStatus: Map<String, dynamic>.from(_currentRideStatus),
+                      rideStatus: paymentRideStatus,
                     ),
                   ),
                 );
