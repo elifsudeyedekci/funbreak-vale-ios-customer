@@ -385,8 +385,21 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
         _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
       }
       
-      // MESAFE VE BEKLEME AYRI HESAPLA
-      if (backendBasePrice != null && backendBasePrice > 0) {
+      // ✅ MESAFE VE BEKLEME BACKEND'DEN AYRI GELİYOR!
+      // Backend'den distance_price veya base_price al
+      final backendDistancePrice = widget.rideStatus['distance_price'] ?? 
+                                    widget.rideStatus['base_price'] ?? 
+                                    backendBasePrice;
+      // Backend'den waiting_fee al
+      final backendWaitingFee = widget.rideStatus['waiting_fee'] ?? 
+                                 widget.rideDetails['waiting_fee'];
+      
+      if (backendDistancePrice != null && backendDistancePrice > 0) {
+        // ✅ Backend ayrıştırılmış fiyat gönderdi
+        _basePrice = double.tryParse(backendDistancePrice.toString()) ?? 0.0;
+        _waitingFee = double.tryParse(backendWaitingFee?.toString() ?? '0') ?? 0.0;
+        print('💳 ÖDEME: Backend ayrıştırılmış fiyat - Mesafe: ₺${_basePrice.toStringAsFixed(0)}, Bekleme: ₺${_waitingFee.toStringAsFixed(0)}, Özel Konum: ₺${_locationExtraFee.toStringAsFixed(0)}, Toplam: ₺${_totalPrice.toStringAsFixed(0)}');
+      } else if (backendBasePrice != null && backendBasePrice > 0) {
         // Backend base_price_only gönderiyor (mesafe ücreti)
         _basePrice = double.tryParse(backendBasePrice.toString()) ?? 0.0;
         // Bekleme = Toplam - Mesafe - Özel Konum Ücreti

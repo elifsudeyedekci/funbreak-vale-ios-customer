@@ -1597,15 +1597,24 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   }
   
   Widget _buildPriceBreakdown(Map<String, dynamic> ride, double estimatedPrice, double actualPrice, int waitingTime) {
-    final waitingFee = waitingTime > 15 ? (waitingTime - 15) * 10.0 : 0.0;
+    // ✅ Backend'den bekleme ücreti al (varsa), yoksa hesapla
+    final backendWaitingFee = double.tryParse(ride['waiting_fee']?.toString() ?? '0') ?? 0.0;
+    final waitingFee = backendWaitingFee > 0 
+        ? backendWaitingFee 
+        : (waitingTime > 15 ? ((waitingTime - 15) / 15).ceil() * 200.0 : 0.0);
     
     // ✅ Özel konum ücreti - Backend 'location_extra_fee' gönderiyor
     final locationExtraFee = (double.tryParse(ride['location_extra_fee']?.toString() ?? '0') ?? 0.0) > 0
         ? double.tryParse(ride['location_extra_fee'].toString()) ?? 0.0
         : double.tryParse(ride['special_location']?['fee']?.toString() ?? '0') ?? 0.0;
     
-    // Temel ücret = Toplam - Bekleme - Özel Konum
-    final baseFare = actualPrice - waitingFee - locationExtraFee;
+    // ✅ Backend'den mesafe ücreti al (varsa), yoksa hesapla
+    final backendDistancePrice = double.tryParse(ride['distance_price']?.toString() ?? 
+                                                   ride['base_price']?.toString() ?? '0') ?? 0.0;
+    // Temel ücret = Backend'den gelen veya (Toplam - Bekleme - Özel Konum)
+    final baseFare = backendDistancePrice > 0 
+        ? backendDistancePrice 
+        : actualPrice - waitingFee - locationExtraFee;
     
     // 🎁 İndirim bilgilerini al
     final discountCode = ride['discount_code']?.toString() ?? '';

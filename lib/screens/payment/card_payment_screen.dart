@@ -188,52 +188,88 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     }
   }
 
+  // ✅ Duplicate dialog engelleme flag'i
+  bool _dialogShown = false;
+
   void _handleWebViewNavigation(String url) {
     print('🌐 WebView URL: $url');
+    
+    // ⚠️ Dialog zaten gösterildiyse tekrar gösterme (race condition engellemesi)
+    if (_dialogShown) {
+      print('⚠️ Dialog zaten gösterildi, tekrar gösterilmiyor');
+      return;
+    }
 
-    // Deep link kontrolü
+    // ═══════════════════════════════════════════════════════════════
+    // 1. DEEP LINK KONTROLÜ - EN ÖNCELİKLİ (Backend JavaScript redirect)
+    // ═══════════════════════════════════════════════════════════════
     if (url.startsWith('funbreakvale://payment/success')) {
-      _showSuccessDialog();
-    } else if (url.startsWith('funbreakvale://payment/failed')) {
+      _dialogShown = true;
+      print('✅ DEEP LINK: Ödeme başarılı');
+      
+      final uri = Uri.parse(url);
+      final isCardSaved = uri.queryParameters['card_saved'] == 'true';
+      
+      if (isCardSaved) {
+        print('💳 KART KAYDEDİLDİ!');
+        _showCardSavedDialog();
+      } else {
+        _showSuccessDialog();
+      }
+      return;
+    }
+    
+    if (url.startsWith('funbreakvale://payment/failed')) {
+      _dialogShown = true;
+      print('❌ DEEP LINK: Ödeme başarısız');
+      
       final uri = Uri.parse(url);
       final error = uri.queryParameters['error'] ?? 'Ödeme başarısız';
       _showErrorDialog(Uri.decodeComponent(error));
+      return;
     }
     
-    // Callback URL kontrolü - ANINDA başarı dialog'u aç
-    if (url.contains('payment_callback.php')) {
+    // ═══════════════════════════════════════════════════════════════
+    // 2. ✅ PAYMENT RESULT PAGE - EN GÜVENİLİR ÇÖZÜM!
+    // Backend payment_callback.php'den buraya redirect ediyor
+    // URL'de status parametresi var, deep link'e gerek yok!
+    // ═══════════════════════════════════════════════════════════════
+    if (url.contains('payment_result.php')) {
       final uri = Uri.parse(url);
       final status = uri.queryParameters['status'];
+      final error = uri.queryParameters['error'] ?? 'Ödeme başarısız';
       
-      print('🎯 CALLBACK URL YAKALANDI: $status');
+      print('🎯 ÖDEME SONUÇ SAYFASI: status=$status');
+      
+      _dialogShown = true;
       
       if (status == 'success') {
-        print('✅ ÖDEME BAŞARILI - Dialog açılıyor');
-        // WebView'i kapat ve başarı dialog'u aç
-        if (mounted) {
-          setState(() {
-            _showWebView = false;
-          });
-          Future.delayed(Duration(milliseconds: 100), () {
-            if (mounted) {
-              _showSuccessDialog();
-            }
-          });
-        }
+        print('✅ ÖDEME BAŞARILI!');
+        _showSuccessDialog();
       } else {
-        print('❌ ÖDEME BAŞARISIZ - Dialog açılıyor');
-        final message = uri.queryParameters['message'] ?? 'Ödeme başarısız';
-        if (mounted) {
-          setState(() {
-            _showWebView = false;
-          });
-          Future.delayed(Duration(milliseconds: 100), () {
-            if (mounted) {
-              _showErrorDialog(Uri.decodeComponent(message));
-            }
-          });
-        }
+        print('❌ ÖDEME BAŞARISIZ: $error');
+        _showErrorDialog(Uri.decodeComponent(error));
       }
+      return;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // 3. KART DOĞRULAMA CALLBACK
+    // ═══════════════════════════════════════════════════════════════
+    if (url.contains('card_verification_callback.php')) {
+      // Deep link'i bekle - burada işlem YAPMA
+      // Backend JavaScript ile deep link'e yönlendirecek
+      print('⏳ Kart doğrulama callback - deep link bekleniyor...');
+      return;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // 4. ÖDEME CALLBACK - payment_result.php'ye redirect olacak
+    // ═══════════════════════════════════════════════════════════════
+    if (url.contains('payment_callback.php')) {
+      // Backend buradan payment_result.php'ye redirect edecek
+      print('⏳ Ödeme callback - payment_result.php bekleniyor...');
+      return;
     }
   }
 
@@ -270,6 +306,80 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
             const SizedBox(height: 10),
             Text(
               '${widget.amount.toStringAsFixed(2)} TL tutarındaki ödemeniz başarıyla tamamlandı.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[400], fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dialog kapat
+                Navigator.of(context).pop(true); // Ekranı kapat, başarılı dön
+              },
+              child: const Text(
+                'Tamam',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Kart kaydedildi dialog'u
+  void _showCardSavedDialog() {
+    setState(() {
+      _showWebView = false;
+      _isLoading = false;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2937),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                ),
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: const Icon(Icons.credit_card, color: Colors.white, size: 45),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Kart Kaydedildi!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Kartınız başarıyla doğrulandı ve kaydedildi.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[400], fontSize: 14),
             ),
@@ -703,20 +813,8 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
                 },
                 onPageFinished: (url) {
                   print('✅ 3D Secure sayfa yüklendi: $url');
-                  
-                  // Callback sayfası yüklendiyse 1 saniye bekle ve başarı dialog'u aç
-                  if (url.contains('payment_callback.php?status=success')) {
-                    print('🕐 CALLBACK BAŞARILI - 1 saniye sonra dialog açılacak');
-                    Future.delayed(Duration(seconds: 1), () {
-                      if (mounted && _showWebView) {
-                        print('🎉 TIMEOUT - Başarı dialog açılıyor');
-                        setState(() {
-                          _showWebView = false;
-                        });
-                        _showSuccessDialog();
-                      }
-                    });
-                  }
+                  // ⚠️ Deep link'i bekle - burada işlem YAPMA
+                  // Backend JavaScript ile deep link'e yönlendirecek
                 },
                 onNavigationRequest: (request) {
                   print('🔗 WebView Navigation: ${request.url}');

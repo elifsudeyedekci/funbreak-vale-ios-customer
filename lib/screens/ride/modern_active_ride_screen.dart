@@ -3149,13 +3149,50 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     }
   }
 
-  // ROTA ÇİZGİSİ GÜNCELLE - ŞOFÖRDEN MÜŞTERİYE! ✅
-  // Google Directions API ile gerçek yol rotası
+  // ROTA ÇİZGİSİ GÜNCELLE - DURUMA GÖRE HEDEF BELİRLE! ✅
+  // accepted: sürücü → pickup (müşteri konumu)
+  // in_progress: sürücü → destination (varış noktası)
   List<LatLng> _routePoints = []; // Rota noktaları cache
   LatLng? _lastDriverLocationForRoute; // Son rota çizilen konum
+  String? _lastRouteStatus; // Son rota durumu (status değişince yeni rota çek)
   
   void _updateRoutePolyline() {
-    if (_driverLocation == null || _customerLocation == null) return;
+    if (_driverLocation == null) return;
+    
+    // ✅ HEDEF NOKTA BELİRLE - DURUMA GÖRE!
+    final String currentStatus = _currentRideStatus['status']?.toString() ?? 
+                                  widget.rideDetails['status']?.toString() ?? 'accepted';
+    
+    LatLng? targetLocation;
+    String targetType = 'pickup';
+    
+    if (currentStatus == 'in_progress' || currentStatus == 'ride_started') {
+      // Yolculuk başladı - sürücü → VARIŞ NOKTASI
+      final destLat = (widget.rideDetails['destination_lat'] as num?)?.toDouble() ??
+                      (widget.rideDetails['destination_latitude'] as num?)?.toDouble() ??
+                      (_currentRideStatus['destination_lat'] as num?)?.toDouble();
+      final destLng = (widget.rideDetails['destination_lng'] as num?)?.toDouble() ??
+                      (widget.rideDetails['destination_longitude'] as num?)?.toDouble() ??
+                      (_currentRideStatus['destination_lng'] as num?)?.toDouble();
+      
+      if (destLat != null && destLng != null && destLat != 0 && destLng != 0) {
+        targetLocation = LatLng(destLat, destLng);
+        targetType = 'destination';
+        print('🎯 [MÜŞTERİ] Rota hedefi: VARIŞ NOKTASI ($destLat, $destLng)');
+      }
+    }
+    
+    // Fallback: pickup (müşteri konumu)
+    if (targetLocation == null && _customerLocation != null) {
+      targetLocation = _customerLocation;
+      targetType = 'pickup';
+      print('🎯 [MÜŞTERİ] Rota hedefi: ALIŞ NOKTASI');
+    }
+    
+    if (targetLocation == null) {
+      print('⚠️ [MÜŞTERİ] Hedef konum bulunamadı - rota çizilmeyecek');
+      return;
+    }
     
     // ✅ SULTANAHMET (VARSAYILAN) KONTROLÜ - Gerçek konum değilse rota çizme!
     final bool isDriverLocationValid = 
@@ -3173,16 +3210,26 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
       return;
     }
     
+    // Status değiştiyse (örn: accepted→in_progress) yeni rota çek
+    final bool statusChanged = _lastRouteStatus != null && _lastRouteStatus != currentStatus;
+    
     // Şoför konumu önemli ölçüde değiştiyse yeni rota çek (50 metre)
-    if (_lastDriverLocationForRoute == null || 
+    if (statusChanged || _lastDriverLocationForRoute == null || 
         _haversineDistance(
           _lastDriverLocationForRoute!.latitude, 
           _lastDriverLocationForRoute!.longitude,
           _driverLocation!.latitude,
           _driverLocation!.longitude
         ) > 0.05) { // 50 metre
-      print('🛣️ [MÜŞTERİ] Rota güncelleniyor - sürücü ${(_haversineDistance(_lastDriverLocationForRoute?.latitude ?? 0, _lastDriverLocationForRoute?.longitude ?? 0, _driverLocation!.latitude, _driverLocation!.longitude) * 1000).toStringAsFixed(0)}m hareket etti');
-      _fetchRouteFromDirectionsAPI();
+      
+      if (statusChanged) {
+        print('🔄 [MÜŞTERİ] Status değişti (${ _lastRouteStatus} → $currentStatus) - yeni rota çekiliyor');
+      } else {
+        print('🛣️ [MÜŞTERİ] Rota güncelleniyor - sürücü ${(_haversineDistance(_lastDriverLocationForRoute?.latitude ?? 0, _lastDriverLocationForRoute?.longitude ?? 0, _driverLocation!.latitude, _driverLocation!.longitude) * 1000).toStringAsFixed(0)}m hareket etti');
+      }
+      
+      _lastRouteStatus = currentStatus;
+      _fetchRouteFromDirectionsAPI(targetLocation, targetType);
     } else {
       // Mevcut rota ile güncelle
       _drawRoutePolyline();
@@ -3190,13 +3237,13 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
   }
   
   // Google Directions API'den gerçek yol rotası al
-  Future<void> _fetchRouteFromDirectionsAPI() async {
-    if (_driverLocation == null || _customerLocation == null) return;
+  Future<void> _fetchRouteFromDirectionsAPI(LatLng target, String targetType) async {
+    if (_driverLocation == null) return;
     
     try {
       final String apiKey = 'AIzaSyAmPUh6vlin_kvFvssOyKHz5BBjp5WQMaY';
       final String origin = '${_driverLocation!.latitude},${_driverLocation!.longitude}';
-      final String destination = '${_customerLocation!.latitude},${_customerLocation!.longitude}';
+      final String destination = '${target.latitude},${target.longitude}';
       
       final String url = 'https://maps.googleapis.com/maps/api/directions/json'
           '?origin=$origin'
