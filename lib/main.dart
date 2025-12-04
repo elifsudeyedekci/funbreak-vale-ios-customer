@@ -186,33 +186,12 @@ Future<void> _initializeFirebaseMessaging() async {
       }
     }
     
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? prefs.getString('admin_user_id');
-    
-    if (userId != null && userId.isNotEmpty) {
-      // iOS'ta token alma 10 saniye sürebilir
-      final fcmToken = await messaging.getToken().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ iOS FCM Token timeout - tekrar denenecek');
-          return null;
-        },
-      );
-      
-      if (fcmToken != null && fcmToken.isNotEmpty) {
-        print('📱 [MÜŞTERİ] FCM Token alındı: ${fcmToken.substring(0, 20)}...');
-        await _saveCustomerFCMToken(fcmToken);
-      } else {
-        print('⚠️ FCM Token boş geldi - APNs izni kontrol et');
-      }
-    } else {
-      print('⚠️ [MÜŞTERİ] User ID yok - FCM token kaydedilmedi (login sonrası yapılacak)');
-    }
+    // ✅ TOKEN ALMA İŞLEMİ AdvancedNotificationService TARAFINDAN YAPILACAK!
+    // Rate limit (Too many server requests) hatasını önlemek için burada token almıyoruz
+    print('✅ FCM permission alındı - Token alma AdvancedNotificationService tarafından yapılacak');
   } catch (e) {
-    print('⚠️ [MÜŞTERİ] FCM token kaydetme hatası: $e');
+    print('⚠️ [MÜŞTERİ] FCM permission hatası: $e');
   }
-  
-  print('✅ FCM token setup tamamlandı - Bildirimler AdvancedNotificationService tarafından yönetiliyor');
 }
 
 // MÜŞTERİ FCM TOKEN KAYDETME - ŞOFÖR GİBİ ÇALIŞIYOR!

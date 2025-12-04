@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io'; // ✅ Platform.isIOS için gerekli!
 import 'dart:math'; // ✅ Random için!
 import 'admin_api_provider.dart';
+import '../services/advanced_notification_service.dart'; // ✅ FCM TOKEN İÇİN!
 
 class AuthProvider with ChangeNotifier {
   FirebaseAuth? _auth;
@@ -506,141 +507,17 @@ class AuthProvider with ChangeNotifier {
   }
   
   // ✅ FCM TOKEN GÜNCELLEME - LOGIN/REGISTER SONRASI OTOMATIK ÇAĞRILIR!
+  // ✅ RATE LIMIT HATASINI ÖNLEMEK İÇİN AdvancedNotificationService KULLANILIYOR!
   Future<void> _updateFCMToken() async {
-    print('🔔🔔🔔 iOS CUSTOMER: _updateFCMToken() BAŞLADI! 🔔🔔🔔');
-    await _logToBackend('🔔 FCM _updateFCMToken BAŞLADI (CUSTOMER)');
+    print('🔔 iOS CUSTOMER: _updateFCMToken() - AdvancedNotificationService kullanılıyor');
     
     try {
-      print('🔔 MÜŞTERİ: FCM Token güncelleme başlatılıyor...');
-      print('📱 iOS VERSION CHECK: ${Platform.isIOS ? "iOS" : "Android"}');
-      await _logToBackend('iOS VERSION: ${Platform.isIOS ? "iOS" : "Android"}');
-      
-      final prefs = await SharedPreferences.getInstance();
-      
-      // ✅ DEBUG: Tüm key'leri kontrol et - print() KULLAN (backend log'a düşsün!)
-      final allKeys = prefs.getKeys();
-      print('🔍 iOS CUSTOMER FCM: SharedPreferences keys: $allKeys');
-      print('🔍 iOS CUSTOMER FCM: admin_user_id = ${prefs.getString('admin_user_id')}');
-      print('🔍 iOS CUSTOMER FCM: user_id = ${prefs.getString('user_id')}');
-      print('🔍 iOS CUSTOMER FCM: customer_id = ${prefs.getString('customer_id')}');
-      print('🔍 iOS CUSTOMER FCM: is_logged_in = ${prefs.getBool('is_logged_in')}');
-      
-      final customerUserId = prefs.getString('admin_user_id') ?? 
-                             prefs.getString('customer_id') ?? 
-                             prefs.getString('user_id');
-      
-      print('🔍 iOS CUSTOMER FCM: Final userId = $customerUserId');
-      await _logToBackend('FCM userId = $customerUserId');
-      
-      if (customerUserId == null || customerUserId.isEmpty) {
-        print('❌❌❌ iOS CUSTOMER: User ID NULL - RETURN EDİYOR! ❌❌❌');
-        await _logToBackend('❌ FCM USER ID NULL!', level: 'ERROR');
-        return;
-      }
-      
-      print('✅ iOS CUSTOMER: User ID BULUNDU: $customerUserId - Devam ediliyor...');
-      await _logToBackend('✅ FCM User ID bulundu: $customerUserId');
-      
-      // FCM Token al (iOS için önce izin!)
-      print('📱 iOS CUSTOMER: FirebaseMessaging instance alınıyor...');
-      final messaging = FirebaseMessaging.instance;
-      print('✅ iOS CUSTOMER: FirebaseMessaging instance alındı!');
-      
-      // ✅ iOS için bildirim izni iste!
-      print('🔔 iOS CUSTOMER: Bildirim izni isteniyor...');
-      final settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      print('✅ iOS CUSTOMER: İzin isteği tamamlandı!');
-      
-      print('🔔 iOS CUSTOMER bildirim izni: ${settings.authorizationStatus}');
-      print('🔔 Alert: ${settings.alert}, Badge: ${settings.badge}, Sound: ${settings.sound}');
-      
-      if (settings.authorizationStatus != AuthorizationStatus.authorized && 
-          settings.authorizationStatus != AuthorizationStatus.provisional) {
-        print('❌❌❌ iOS CUSTOMER: Bildirim izni REDDEDİLDİ - Status: ${settings.authorizationStatus} ❌❌❌');
-        return;
-      }
-      
-      print('✅ iOS CUSTOMER: İzin VERİLDİ - Token alınacak...');
-      
-      // ✅ iOS için APNs token bekle (maksimum 10 saniye)
-      if (Platform.isIOS) {
-        print('📱 iOS CUSTOMER: APNs token bekleniyor...');
-        String? apnsToken;
-        for (int i = 0; i < 20; i++) {
-          apnsToken = await messaging.getAPNSToken();
-          if (apnsToken != null) {
-            print('✅ iOS CUSTOMER: APNs token alındı (${i * 500}ms sonra)');
-            break;
-          }
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-        
-        if (apnsToken == null) {
-          print('⚠️ iOS CUSTOMER: APNs token 10 saniyede alınamadı - yine de FCM dene');
-        }
-      }
-      
-      final fcmToken = await messaging.getToken().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ iOS CUSTOMER: FCM Token timeout');
-          return null;
-        },
-      );
-      
-      if (fcmToken == null || fcmToken.isEmpty) {
-        print('⚠️ iOS CUSTOMER: FCM Token alınamadı - APNs kontrol et!');
-        await _logToBackend('❌ FCM Token NULL!', level: 'ERROR');
-        return;
-      }
-      
-      print('✅ iOS CUSTOMER: FCM Token alındı: ${fcmToken.substring(0, 20)}...');
-      print('📤 iOS CUSTOMER: Backend\'e gönderiliyor - User ID: $customerUserId, Type: customer');
-      await _logToBackend('✅ FCM Token alındı: ${fcmToken.substring(0, 20)}...');
-      
-      // Backend'e gönder
-      try {
-        print('🌐 iOS CUSTOMER: HTTP POST başlatılıyor (update_fcm_token.php)...');
-        await _logToBackend('FCM HTTP POST başlatıldı');
-        
-        final response = await http.post(
-          Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'user_id': customerUserId,
-            'user_type': 'customer',
-            'fcm_token': fcmToken,
-          }),
-        ).timeout(const Duration(seconds: 10));
-        
-        print('📥 iOS CUSTOMER: HTTP Response alındı - Status: ${response.statusCode}');
-        await _logToBackend('FCM API Response: ${response.statusCode}');
-        
-        if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
-          print('✅✅✅ iOS CUSTOMER: FCM Token backend\'e kaydedildi! ✅✅✅');
-          print('🔍 iOS CUSTOMER FCM: Backend response = $responseData');
-          await _logToBackend('✅✅✅ FCM BAŞARILI: $responseData', level: 'SUCCESS');
-        } else {
-          print('⚠️⚠️ iOS CUSTOMER: FCM Token backend kayıt hatası: ${response.statusCode} ⚠️⚠️');
-          print('🔍 iOS CUSTOMER FCM: Response body = ${response.body}');
-          await _logToBackend('❌ FCM API ERROR: ${response.statusCode} - ${response.body}', level: 'ERROR');
-        }
-      } catch (httpError) {
-        print('❌❌ iOS CUSTOMER: HTTP REQUEST HATASI: $httpError ❌❌');
-        rethrow;
-      }
-    } catch (e, stackTrace) {
-      print('❌❌❌ iOS CUSTOMER: FCM Token güncelleme EXCEPTION: $e ❌❌❌');
-      print('❌ Exception Type: ${e.runtimeType}');
-      await _logToBackend('❌❌❌ FCM EXCEPTION: $e (Type: ${e.runtimeType})', level: 'ERROR');
-      
-      // Exception'ı yeniden fırlat ki görelim!
-      rethrow;
+      // Token alma işlemi AdvancedNotificationService.initialize() tarafından yapılacak
+      // Bu fonksiyon sadece initialize çağırıyor - rate limit hatası önleniyor
+      await AdvancedNotificationService.initialize();
+      print('✅ FCM Token güncelleme AdvancedNotificationService tarafından yapılacak');
+    } catch (e) {
+      print('⚠️ FCM Token güncelleme hatası: $e');
     }
   }
 }

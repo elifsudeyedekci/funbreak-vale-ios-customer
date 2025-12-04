@@ -230,22 +230,9 @@ class _SplashScreenState extends State<SplashScreen> {
         _handleNotificationTap(message);
       });
       
-      // FCM token al - main.dart'taki fonksiyon kullanılacak!
-      messaging.getToken().then((token) {
-        print('📱 FCM Token (MÜŞTERİ): $token');
-        
-        if (token != null && token.isNotEmpty) {
-          print('✅ MÜŞTERİ FCM Token başarılı: ${token.substring(0, 20)}...');
-          // NOT: Token kaydetme main.dart'ta _saveCustomerFCMToken() ile yapılıyor
-          print('📝 Token kaydetme main.dart tarafından yapılacak (background handler)');
-        } else {
-          print('❌ MÜŞTERİ FCM Token hatası!');
-        }
-      }).catchError((e) {
-        print('❌ FCM Token hatası: $e');
-      });
-      
-      print('✅ Push notification handler\'ları kuruldu');
+      // ✅ FCM TOKEN AdvancedNotificationService TARAFINDAN ALINACAK!
+      // Rate limit hatasını önlemek için burada token almıyoruz
+      print('✅ Push notification handler\'ları kuruldu - Token AdvancedNotificationService tarafından alınacak');
     } catch (e) {
       print('❌ Push notification setup hatası: $e');
     }

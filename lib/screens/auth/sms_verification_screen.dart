@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io'; // ✅ Platform.isIOS için!
 import '../../providers/auth_provider.dart';
+import '../../services/advanced_notification_service.dart'; // ✅ FCM TOKEN İÇİN!
 import '../main_screen.dart';
 
 class SmsVerificationScreen extends StatefulWidget {
@@ -266,87 +267,19 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   }
 
   /// 📱 FCM TOKEN KAYDETME FONKSİYONU
-  /// Push notification alabilmek için kullanıcının FCM token'ını backend'e kaydeder
-  /// iOS için APNs token alınana kadar bekler!
+  /// ✅ RATE LIMIT HATASINI ÖNLEMEK İÇİN AdvancedNotificationService KULLANILIYOR!
   Future<void> _saveFCMToken(String userId) async {
     try {
-      print('🔔🔔🔔 _saveFCMToken BAŞLADI - userId: $userId 🔔🔔🔔');
+      print('🔔 _saveFCMToken: AdvancedNotificationService kullanılıyor - userId: $userId');
+      // Token alma işlemi AdvancedNotificationService.init() tarafından yapılacak
+      // Bu fonksiyon sadece SharedPreferences'a userId kaydedip init çağırıyor
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', userId);
       
-      final messaging = FirebaseMessaging.instance;
-      
-      // ✅ iOS için önce bildirim izni iste!
-      if (Platform.isIOS) {
-        print('📱 iOS: Bildirim izni isteniyor...');
-        final settings = await messaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        
-        print('📱 iOS İzin durumu: ${settings.authorizationStatus}');
-        
-        if (settings.authorizationStatus != AuthorizationStatus.authorized &&
-            settings.authorizationStatus != AuthorizationStatus.provisional) {
-          print('❌ iOS: Bildirim izni reddedildi!');
-          return;
-        }
-        
-        // ✅ iOS için APNs token bekle (maksimum 10 saniye)
-        print('📱 iOS: APNs token bekleniyor...');
-        String? apnsToken;
-        for (int i = 0; i < 20; i++) {
-          apnsToken = await messaging.getAPNSToken();
-          if (apnsToken != null) {
-            print('✅ iOS: APNs token alındı (${i * 500}ms sonra)');
-            break;
-          }
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-        
-        if (apnsToken == null) {
-          print('⚠️ iOS: APNs token 10 saniyede alınamadı!');
-          // Yine de FCM token dene
-        }
-      }
-      
-      // FCM Token al
-      print('📱 FCM Token alınıyor...');
-      final fcmToken = await messaging.getToken().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ FCM Token timeout!');
-          return null;
-        },
-      );
-      
-      if (fcmToken == null || fcmToken.isEmpty) {
-        print('⚠️ FCM Token alınamadı!');
-        return;
-      }
-      
-      print('✅ FCM Token alındı: ${fcmToken.substring(0, 30)}...');
-      
-      final response = await http.post(
-        Uri.parse('https://admin.funbreakvale.com/api/update_fcm_token.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_id': int.parse(userId),
-          'user_type': 'customer',
-          'fcm_token': fcmToken,
-        }),
-      ).timeout(const Duration(seconds: 10));
-      
-      print('📥 Backend response: ${response.statusCode}');
-      
-      final data = json.decode(response.body);
-      
-      if (data['success'] == true) {
-        print('✅✅✅ FCM Token başarıyla kaydedildi! ✅✅✅');
-      } else {
-        print('⚠️ FCM Token kaydedilemedi: ${data['message']}');
-      }
+      // AdvancedNotificationService zaten token alıp kaydedecek
+      await AdvancedNotificationService.initialize();
+      print('✅ FCM Token kaydetme AdvancedNotificationService tarafından yapılacak');
     } catch (e) {
-      // FCM token kaydetme hatası kritik değil, kullanıcı girişi engellenmemeli
       print('⚠️ FCM Token kaydetme hatası (devam ediliyor): $e');
     }
   }
