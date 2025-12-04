@@ -1603,7 +1603,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         ? backendWaitingFee 
         : (waitingTime > 15 ? ((waitingTime - 15) / 15).ceil() * 200.0 : 0.0);
     
-    // ✅ Özel konum ücreti - Backend 'location_extra_fee' gönderiyor
+    // ✅ YENİ: Alış ve Bırakış Özel Konum Ücretleri AYRI AYRI
+    final pickupLocationFee = double.tryParse(ride['pickup_location_fee']?.toString() ?? '0') ?? 0.0;
+    final dropoffLocationFee = double.tryParse(ride['dropoff_location_fee']?.toString() ?? '0') ?? 0.0;
+    final pickupLocationName = ride['pickup_location_name']?.toString() ?? '';
+    final dropoffLocationName = ride['dropoff_location_name']?.toString() ?? '';
+    
+    // Toplam özel konum ücreti (fallback için)
     final locationExtraFee = (double.tryParse(ride['location_extra_fee']?.toString() ?? '0') ?? 0.0) > 0
         ? double.tryParse(ride['location_extra_fee'].toString()) ?? 0.0
         : double.tryParse(ride['special_location']?['fee']?.toString() ?? '0') ?? 0.0;
@@ -1658,12 +1664,25 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           if (waitingFee > 0)
             _buildPriceRow('Bekleme Ücreti (${waitingTime - 15} dk)', waitingFee),
           
-          // ✅ Özel konum ücreti (varsa) - Backend 'location_extra_fee' gönderiyor
-          if ((ride['location_extra_fee'] != null && double.tryParse(ride['location_extra_fee'].toString()) != null && double.parse(ride['location_extra_fee'].toString()) > 0) ||
-              (ride['special_location_fee'] != null && double.tryParse(ride['special_location_fee'].toString()) != null && double.parse(ride['special_location_fee'].toString()) > 0))
+          // ✅ ALIŞ Özel Konum Ücreti (varsa)
+          if (pickupLocationFee > 0)
+            _buildPriceRow(
+              '🗺️ Alış Özel Konum${pickupLocationName.isNotEmpty ? " ($pickupLocationName)" : ""}', 
+              pickupLocationFee
+            ),
+          
+          // ✅ BIRAKIŞ Özel Konum Ücreti (varsa)
+          if (dropoffLocationFee > 0)
+            _buildPriceRow(
+              '🗺️ Bırakış Özel Konum${dropoffLocationName.isNotEmpty ? " ($dropoffLocationName)" : ""}', 
+              dropoffLocationFee
+            ),
+          
+          // ✅ Fallback: Eski sistemle uyumluluk - toplam özel konum (ayrı yoksa)
+          if (pickupLocationFee == 0 && dropoffLocationFee == 0 && locationExtraFee > 0)
             _buildPriceRow(
               '🗺️ Özel Konum Ücreti', 
-              double.parse((ride['location_extra_fee'] ?? ride['special_location_fee'] ?? '0').toString())
+              locationExtraFee
             ),
           
           // 🎁 İndirim (varsa)
