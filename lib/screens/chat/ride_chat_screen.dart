@@ -1466,7 +1466,6 @@ class _RideChatScreenState extends State<RideChatScreen> {
             'synced': true,
           });
         });
-        await _persistMessages();
         _scrollToBottom();
         
         ScaffoldMessenger.of(context).showSnackBar(
