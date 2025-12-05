@@ -442,92 +442,191 @@ class _SmsRegisterScreenState extends State<SmsRegisterScreen> {
     );
   }
   
-  // SÖZLEŞME METİNLERİ
+  // SÖZLEŞME METİNLERİ - YASAL GEÇERLİLİK İÇİN TAM METİN!
   String _getKVKKText() {
-    return '''FunBreak Vale KVKK Aydınlatma Metni
+    return '''FUNBREAK VALE
+YOLCULAR İÇİN KİŞİSEL VERİLERİN İŞLENMESİ VE KORUNMASINA YÖNELİK AYDINLATMA METNİ
 
-6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, kişisel verilerinizin işlenmesine ilişkin aşağıdaki bilgileri paylaşmak isteriz:
+VERİ SORUMLUSU BİLGİLERİ
+Ticaret Ünvanı: FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ
+Mersis No: 0388195898700001
+Ticaret Sicil No: 1105910
+Adres: Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
+Telefon: 0533 448 82 53
+E-posta: info@funbreakvale.com
+Web Sitesi: www.funbreakvale.com
 
-1. VERİ SORUMLUSU
-FunBreak Vale Hizmetleri olarak, kişisel verilerinizin işlenmesinden sorumlu veri sorumlusuyuz.
+GİRİŞ
+6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında kişisel verilerinizin işlenmesine ilişkin aydınlatma yükümlülüğümüzü yerine getirmekteyiz.
 
-2. KİŞİSEL VERİLERİN İŞLENME AMAÇLARI
-- Vale hizmeti sunumu ve yolculuk organizasyonu
-- Müşteri hesabı oluşturma ve yönetimi
-- Ödeme işlemlerinin gerçekleştirilmesi
-- Güvenlik ve dolandırıcılık önleme
-- Yasal yükümlülüklerin yerine getirilmesi
-- Hizmet kalitesinin artırılması
+A. İŞLENEN KİŞİSEL VERİ KATEGORİLERİ
 
-3. İŞLENEN KİŞİSEL VERİLER
-Ad-soyad, telefon, e-posta, konum bilgileri, ödeme bilgileri, IP adresi, cihaz bilgileri, yolculuk geçmişi
+1. Kimlik Bilgileri: Ad, soyad, T.C. kimlik numarası, doğum tarihi
+2. İletişim Bilgileri: Telefon numarası, e-posta adresi, adres bilgileri
+3. Müşteri İşlem Bilgileri: Yolculuk geçmişi, rezervasyon bilgileri, ödeme kayıtları
+4. Lokasyon Verileri: GPS konum bilgileri, alış-bırakış noktaları, rota bilgileri
+5. Finansal Bilgiler: Ödeme yöntemi, kart bilgileri (maskelenmiş), fatura bilgileri
+6. Pazarlama Bilgileri: Tercihler, kampanya katılımları
+7. Cihaz/Teknik Veriler: IP adresi, cihaz kimliği, uygulama versiyonu
 
-4. VERİ AKTARIMI
-Kişisel verileriniz, hizmet sunumu için gerekli olduğu ölçüde şoförlerimiz ve iş ortaklarımızla paylaşılabilir.
+B. KİŞİSEL VERİLERİN İŞLENME AMAÇLARI
 
-5. HAKLARINIZ
-- Kişisel verilerinize erişim
-- Düzeltme ve silme talep etme
-- İşleme itiraz etme
-- Veri taşınabilirliği
+• Vale hizmetinin sunulması ve yolculuk organizasyonu
+• Müşteri hesabı oluşturma ve yönetimi
+• Ödeme işlemlerinin gerçekleştirilmesi
+• Müşteri destek hizmetleri
+• Hizmet kalitesinin ölçülmesi ve iyileştirilmesi
+• Yasal yükümlülüklerin yerine getirilmesi
+• Güvenlik ve dolandırıcılık önleme
+• Kampanya ve promosyon bildirimleri (onayınız dahilinde)
 
-İletişim: info@funbreakvale.com
+C. KİŞİSEL VERİLERİN AKTARIMI
 
-Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
+Kişisel verileriniz;
+• Vale (sürücü) ile yolculuk eşleştirmesi için
+• Ödeme kuruluşları ile ödeme işlemleri için
+• Yasal zorunluluklar kapsamında yetkili kurumlarla
+• Hizmet sağlayıcılar (SMS, e-posta) ile
+paylaşılabilir.
+
+D. VERİ TOPLAMA YÖNTEMİ VE HUKUKİ SEBEBİ
+
+Verileriniz; mobil uygulama, web sitesi ve müşteri hizmetleri kanalları aracılığıyla toplanmaktadır.
+
+Hukuki Sebepler:
+• Sözleşmenin ifası (KVKK m.5/2-c)
+• Yasal yükümlülük (KVKK m.5/2-ç)
+• Meşru menfaat (KVKK m.5/2-f)
+• Açık rıza (KVKK m.5/1)
+
+E. KİŞİSEL VERİ SAHİBİNİN HAKLARI (KVKK m.11)
+
+• Kişisel verilerinizin işlenip işlenmediğini öğrenme
+• İşlenmişse buna ilişkin bilgi talep etme
+• İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme
+• Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme
+• Eksik veya yanlış işlenmişse düzeltilmesini isteme
+• KVKK m.7 kapsamında silinmesini veya yok edilmesini isteme
+• Düzeltme, silme, yok etme işlemlerinin aktarıldığı üçüncü kişilere bildirilmesini isteme
+• İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme
+• Kanuna aykırı işleme sebebiyle zarara uğramanız halinde zararın giderilmesini talep etme
+
+F. BAŞVURU YÖNTEMİ
+
+Haklarınızı kullanmak için info@funbreakvale.com adresine yazılı başvuruda bulunabilirsiniz.
+
+Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
   }
   
   String _getUserAgreementText() {
-    return '''FunBreak Vale Kullanıcı Sözleşmesi
+    return '''FUNBREAK VALE
+YOLCU (MÜŞTERİ) KULLANIM KOŞULLARI SÖZLEŞMESİ
 
-1. HİZMET KAPSAMI
-FunBreak Vale, müşterilerimize profesyonel vale (valet) hizmeti sunmaktadır.
+1. TARAFLAR
+İşbu Sözleşme, Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul adresinde mukim, 0388195898700001 Mersis numaralı FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ ("FunBreak Vale") ile mobil uygulama üzerinden hizmet alan Yolcu ("Müşteri") arasındadır.
 
-2. KULLANIM ŞARTLARI
-- 18 yaşını dolmuş olmak
-- Geçerli bir telefon numarası
-- Doğru konum bilgisi paylaşımı
-- Ödeme yükümlülüklerini yerine getirmek
+2. HİZMET TANIMI
+FunBreak Vale, Yolcu'nun aracını belirlenen noktadan alıp istenen konuma götüren profesyonel vale (valet) ve özel şoför hizmeti sunan bir mobil uygulama platformudur.
 
-3. FİYATLANDIRMA
-- Mesafe bazlı fiyatlandırma
-- Bekleme ücreti: İlk 15 dakika ücretsiz, sonrası her 15 dakika için panel ayarlarındaki ücret
-- Saatlik paketler mevcut
-- Fiyatlar anında gösterilir
+3. KULLANIM ŞARTLARI
+• 18 yaşını doldurmuş olmak
+• Geçerli bir telefon numarası ve e-posta adresi
+• Doğru konum ve kişisel bilgi paylaşımı
+• Aracın yasal belgelerinin eksiksiz olması
+• Ödeme yükümlülüklerini zamanında yerine getirmek
 
-4. İPTAL VE İADE
-- Şoför bulunamadan iptal: Ücretsiz
-- Şoför atandıktan sonra iptal: İptal ücreti uygulanabilir
-- Yolculuk başladıktan sonra iptal: Tam ücret tahsil edilir
+4. FİYATLANDIRMA VE ÖDEME
 
-5. SORUMLULUK
-- Hizmet kalitesi garanti edilir
-- Araç içi eşyalardan şoför sorumlu değildir
-- Müşteri güvenliği önceliğimizdir
+4.1. Mesafe Bazlı Fiyatlandırma:
+• 0-5 km: 1.500 TL
+• 5-10 km: 1.700 TL
+• 10-15 km: 1.900 TL
+• 15-20 km: 2.100 TL
+• 20-25 km: 2.300 TL
+• 25-30 km: 2.500 TL
+• 30-35 km: 2.700 TL
+• 35-40 km: 2.900 TL
 
-6. GİZLİLİK
-Kişisel bilgileriniz KVKK kapsamında korunur.
+4.2. Bekleme Ücreti:
+İlk 15 dakika ücretsizdir. Sonraki her 15 dakika veya kesri için 200 TL ücret uygulanır.
 
-Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
+4.3. Saatlik Paketler:
+• 0-4 saat: 3.000 TL
+• 4-8 saat: 4.500 TL
+• 8-12 saat: 6.000 TL
+
+4.4. Özel Konum Ücreti:
+Havalimanı, marina, özel bölge gibi lokasyonlar için ek ücret uygulanabilir.
+
+5. İPTAL VE İADE KOŞULLARI
+• 45 dakika veya daha fazla kala iptal: Ücretsiz
+• 45 dakikadan az kala iptal: 1.500 TL iptal ücreti
+• Yolculuk başladıktan sonra iptal: Tam ücret tahsil edilir
+• Şoför bulunamadan iptal: Ücretsiz
+
+6. YOLCU'NUN YÜKÜMLÜLÜKLERİ
+• Doğru ve güncel bilgi vermek
+• Araç anahtarlarını teslim etmek
+• Araçta yasadışı madde bulundurmamak
+• Şoföre saygılı davranmak
+• Ödeme yükümlülüklerini yerine getirmek
+
+7. FUNBREAK VALE'NİN SORUMLULUKLARI
+• Profesyonel ve güvenilir hizmet sunmak
+• Eğitimli sürücüler sağlamak
+• Kişisel verileri korumak
+• Müşteri desteği sağlamak
+
+8. SORUMLULUK SINIRI
+• Araç içinde bırakılan değerli eşyalardan FunBreak Vale sorumlu değildir
+• Trafik koşulları ve mücbir sebeplerden kaynaklanan gecikmelerden sorumluluk kabul edilmez
+• Yanlış adres bilgisi verilmesinden kaynaklanan sorunlardan Yolcu sorumludur
+
+9. KİŞİSEL VERİLERİN KORUNMASI
+Kişisel verileriniz 6698 sayılı KVKK kapsamında korunmaktadır. Detaylı bilgi için KVKK Aydınlatma Metni'ni inceleyiniz.
+
+10. YETKİLİ MAHKEME
+İşbu sözleşmeden doğan uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri yetkilidir.
+
+11. YÜRÜRLÜK
+Bu sözleşme, Yolcu'nun uygulamaya kayıt olması ile yürürlüğe girer.
+
+FunBreak Global Teknoloji Limited Şirketi
+Mersis No: 0388195898700001
+info@funbreakvale.com | www.funbreakvale.com
+
+Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
   }
   
   String _getCommercialText() {
-    return '''Ticari Elektronik İleti Onayı
+    return '''TİCARİ ELEKTRONİK İLETİ ONAYI
 
-6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun uyarınca:
+6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun ve ilgili mevzuat uyarınca:
 
-FunBreak Vale tarafından;
-- Kampanya ve indirim bildirimleri
-- Yeni özellik duyuruları
-- Özel fırsatlar
-- Anketler
+FUNBREAK GLOBAL TEKNOLOJİ LİMİTED ŞİRKETİ ("FunBreak Vale") tarafından;
 
-konularında SMS, e-posta, bildirim yoluyla ticari elektronik ileti almayı kabul ediyorum.
+• Kampanya, indirim ve promosyon bildirimleri
+• Yeni özellik ve hizmet duyuruları
+• Özel fırsatlar ve kişiselleştirilmiş teklifler
+• Anket ve geri bildirim talepleri
+• Etkinlik ve organizasyon bildirimleri
 
-Bu iznimi istediğim zaman geri alabilirim.
+konularında SMS, e-posta, push bildirim ve telefon yoluyla ticari elektronik ileti almayı AÇIK RIZAMLA kabul ediyorum.
 
-Ret için: info@funbreakvale.com veya uygulama ayarları
+İZNİN GERİ ALINMASI:
+Bu iznimi dilediğim zaman aşağıdaki yöntemlerle geri alabilirim:
+• E-posta: info@funbreakvale.com
+• Uygulama içi ayarlar
+• SMS ile "IPTAL" yazarak
 
-Versiyon: 1.0 | Tarih: 21 Ekim 2025''';
+İzin geri alındıktan sonra 3 iş günü içinde ticari ileti gönderimi durdurulacaktır.
+
+VERİ SORUMLUSU:
+FunBreak Global Teknoloji Limited Şirketi
+Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
+Mersis No: 0388195898700001
+
+Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
   }
 
   @override

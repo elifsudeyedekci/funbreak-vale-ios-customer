@@ -1,4 +1,3 @@
-import 'dart:io';  // ⚠️ PLATFORM CHECK!
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../services/dynamic_contact_service.dart';
 import 'main_screen.dart';
 import 'auth/sms_login_screen.dart';
+import 'legal/contract_update_screen.dart';  // SÖZLEŞME GÜNCELLEME EKRANI
 import '../main.dart' show navigatorKey; // MAIN.DART'DAN IMPORT
 
 class SplashScreen extends StatefulWidget {
@@ -41,9 +41,32 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     
     if (isLoggedIn) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
+      // ✅ SÖZLEŞME GÜNCELLEME KONTROLÜ
+      final contractCheck = await _checkContractUpdates();
+      
+      if (!mounted) return;
+      
+      if (contractCheck['needs_update'] == true) {
+        // Sözleşme güncelleme ekranına yönlendir
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ContractUpdateScreen(
+              customerId: contractCheck['customer_id'] as int,
+              pendingContracts: List<Map<String, dynamic>>.from(contractCheck['pending_contracts']),
+              onAllAccepted: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const MainScreen()),
+                );
+              },
+            ),
+          ),
+        );
+      } else {
+        // Normal akışa devam
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      }
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const SmsLoginScreen()),
@@ -51,20 +74,79 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
   
+  /// SÖZLEŞME GÜNCELLEME KONTROLÜ
+  /// Backend'den güncel sözleşme versiyonlarını kontrol eder
+  Future<Map<String, dynamic>> _checkContractUpdates() async {
+    try {
+      print('📜 SÖZLEŞME GÜNCELLEME KONTROLÜ YAPILIYOR...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      final customerIdStr = prefs.getString('admin_user_id') ?? 
+                            prefs.getString('customer_id') ?? 
+                            prefs.getString('user_id');
+      
+      if (customerIdStr == null || customerIdStr.isEmpty) {
+        print('⚠️ Customer ID bulunamadı - sözleşme kontrolü atlanıyor');
+        return {'needs_update': false};
+      }
+      
+      final customerId = int.tryParse(customerIdStr) ?? 0;
+      if (customerId <= 0) {
+        print('⚠️ Geçersiz Customer ID - sözleşme kontrolü atlanıyor');
+        return {'needs_update': false};
+      }
+      
+      print('🔍 Customer ID: $customerId');
+      
+      final response = await http.post(
+        Uri.parse('https://admin.funbreakvale.com/api/check_contract_updates.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': customerId,
+          'user_type': 'customer',
+        }),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['success'] == true) {
+          final needsUpdate = data['needs_update'] == true;
+          final pendingContracts = data['pending_contracts'] ?? [];
+          
+          print('📜 Sözleşme kontrolü sonucu:');
+          print('   - Güncelleme gerekiyor: $needsUpdate');
+          print('   - Bekleyen sözleşme sayısı: ${pendingContracts.length}');
+          
+          if (needsUpdate) {
+            for (var contract in pendingContracts) {
+              print('   📄 ${contract['title']} v${contract['latest_version']} (kabul edilen: v${contract['accepted_version']})');
+            }
+          }
+          
+          return {
+            'needs_update': needsUpdate,
+            'customer_id': customerId,
+            'pending_contracts': pendingContracts,
+          };
+        }
+      }
+      
+      print('⚠️ Sözleşme kontrolü API hatası - varsayılan olarak devam');
+      return {'needs_update': false};
+      
+    } catch (e) {
+      print('❌ Sözleşme kontrolü hatası: $e');
+      return {'needs_update': false};
+    }
+  }
+  
   Future<void> _requestPermissionsAndInitializeServices() async {
     try {
-      // Bildirim izni kontrol et (Platform-aware!)
-      if (Platform.isAndroid) {
-        var notificationStatus = await Permission.notification.status;
-        if (notificationStatus.isDenied) {
-          await _requestPermissionWithDialog('Bildirim', Permission.notification);
-        }
-      } else if (Platform.isIOS) {
-        // iOS'ta Firebase Messaging ile kontrol
-        final fcmSettings = await FirebaseMessaging.instance.getNotificationSettings();
-        if (fcmSettings.authorizationStatus != AuthorizationStatus.authorized) {
-          await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
-        }
+      // Bildirim izni kontrol et
+      var notificationStatus = await Permission.notification.status;
+      if (notificationStatus.isDenied) {
+        await _requestPermissionWithDialog('Bildirim', Permission.notification);
       }
       
       // Konum izni kontrol et
@@ -147,17 +229,11 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
   
-  // ⚠️ PLATFORM-SPECIFIC NOTIFICATION CHANNEL
+  // ANDROID NOTIFICATION CHANNEL OLUŞTURMA - KRİTİK EKSİK!
   Future<void> _createNotificationChannel() async {
     try {
-      // iOS'te channel sistemi yok
-      if (Platform.isIOS) {
-        print('⏭️ iOS - Channel sistemi yok, AdvancedNotificationService halleder');
-        return;
-      }
-      
       // Android platform check
-      if (Platform.isAndroid) {
+      if (Theme.of(context).platform == TargetPlatform.android) {
         // Android notification channel oluştur (basitleştirilmiş)
         const AndroidNotificationChannel channel = AndroidNotificationChannel(
           'funbreak_vale_channel', // ID (AndroidManifest ile eşleşmeli)
@@ -230,9 +306,22 @@ class _SplashScreenState extends State<SplashScreen> {
         _handleNotificationTap(message);
       });
       
-      // ✅ FCM TOKEN AdvancedNotificationService TARAFINDAN ALINACAK!
-      // Rate limit hatasını önlemek için burada token almıyoruz
-      print('✅ Push notification handler\'ları kuruldu - Token AdvancedNotificationService tarafından alınacak');
+      // FCM token al - main.dart'taki fonksiyon kullanılacak!
+      messaging.getToken().then((token) {
+        print('📱 FCM Token (MÜŞTERİ): $token');
+        
+        if (token != null && token.isNotEmpty) {
+          print('✅ MÜŞTERİ FCM Token başarılı: ${token.substring(0, 20)}...');
+          // NOT: Token kaydetme main.dart'ta _saveCustomerFCMToken() ile yapılıyor
+          print('📝 Token kaydetme main.dart tarafından yapılacak (background handler)');
+        } else {
+          print('❌ MÜŞTERİ FCM Token hatası!');
+        }
+      }).catchError((e) {
+        print('❌ FCM Token hatası: $e');
+      });
+      
+      print('✅ Push notification handler\'ları kuruldu');
     } catch (e) {
       print('❌ Push notification setup hatası: $e');
     }
