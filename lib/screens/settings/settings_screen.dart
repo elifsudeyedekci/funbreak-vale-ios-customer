@@ -13,6 +13,10 @@ import '../../providers/language_provider.dart';
 import 'price_list_screen.dart';
 import '../../services/dynamic_contact_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -24,11 +28,59 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String _selectedLanguage = 'Türkçe';
+  String? _localProfileImagePath;
+  String? _backendProfilePhotoUrl;
   
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadProfilePhoto();
+  }
+  
+  // PROFİL FOTOĞRAFI KAYNAĞINI BELİRLE
+  ImageProvider? _getProfileImage() {
+    if (_backendProfilePhotoUrl != null && _backendProfilePhotoUrl!.isNotEmpty) {
+      return NetworkImage(_backendProfilePhotoUrl!);
+    }
+    if (_localProfileImagePath != null && _localProfileImagePath!.isNotEmpty) {
+      final file = File(_localProfileImagePath!);
+      if (file.existsSync()) {
+        return FileImage(file);
+      }
+    }
+    return null;
+  }
+  
+  // PROFİL FOTOĞRAFINI YÜKLE
+  Future<void> _loadProfilePhoto() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final localPath = '${directory.path}/profile_image.jpg';
+      final localFile = File(localPath);
+      
+      if (await localFile.exists()) {
+        if (mounted) setState(() => _localProfileImagePath = localPath);
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      final customerId = prefs.getString('customer_id');
+      
+      if (customerId != null) {
+        final response = await http.get(
+          Uri.parse('https://admin.funbreakvale.com/api/get_customer_photo.php?customer_id=$customerId'),
+        ).timeout(const Duration(seconds: 10));
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true && data['photo_url'] != null) {
+            if (mounted) setState(() => _backendProfilePhotoUrl = data['photo_url']);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Profil fotoğrafı yükleme hatası: $e');
+    }
   }
 
   void _loadSettings() async {
@@ -87,11 +139,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: const Color(0xFFFFD700),
-                    child: const Icon(
-                      Icons.person,
-                      size: 30,
-                      color: Colors.white,
-                    ),
+                    backgroundImage: _getProfileImage(),
+                    child: _getProfileImage() == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 30,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
