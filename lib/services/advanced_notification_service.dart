@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'dart:async';
 import 'dart:typed_data'; // 🔥 Int64List için!
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart'; // 🔥 RATE LIMIT RESET İÇİN!
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -301,9 +302,35 @@ class AdvancedNotificationService {
     }
   }
   
-  // ✅ FCM Token al (Android ve iOS ortak)
+  // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
   static Future<void> _getFcmTokenDirect() async {
     try {
+      // 🔥 RATE LIMIT KORUMASI
+      final prefs = await SharedPreferences.getInstance();
+      final lastFailTime = prefs.getString('fcm_token_fail_time');
+      final failCount = prefs.getInt('fcm_token_fail_count') ?? 0;
+      
+      if (lastFailTime != null) {
+        final failTime = DateTime.tryParse(lastFailTime);
+        if (failTime != null) {
+          final diff = DateTime.now().difference(failTime);
+          
+          // 3+ başarısız deneme → OTOMATİK TOKEN RESET!
+          if (failCount >= 3) {
+            print('🔄 FCM Rate limit reset başlatılıyor (failCount: $failCount)...');
+            await _resetFcmToken();
+            await prefs.remove('fcm_token_fail_time');
+            await prefs.setInt('fcm_token_fail_count', 0);
+            return; // Reset sonrası yeni token otomatik alınacak
+          }
+          
+          if (diff.inSeconds < 30) {
+            print('⏳ FCM Rate limit koruması: ${30 - diff.inSeconds} saniye bekle (deneme: $failCount)');
+            return;
+          }
+        }
+      }
+      
       final token = await _messaging!.getToken().timeout(
         Duration(seconds: 5),
         onTimeout: () {
@@ -314,12 +341,67 @@ class AdvancedNotificationService {
       
       if (token != null) {
         print('✅ FCM Token alındı: ${token.substring(0, 30)}...');
+        await prefs.remove('fcm_token_fail_time');
+        await prefs.setInt('fcm_token_fail_count', 0);
         await _updateTokenOnServer(token);
       } else {
         print('⚠️ FCM token null döndü');
+        await prefs.setString('fcm_token_fail_time', DateTime.now().toIso8601String());
+        await prefs.setInt('fcm_token_fail_count', failCount + 1);
       }
     } catch (e) {
       print('❌ FCM token alma hatası: $e');
+      if (e.toString().contains('Too many') || e.toString().contains('unknown')) {
+        final prefs = await SharedPreferences.getInstance();
+        final failCount = prefs.getInt('fcm_token_fail_count') ?? 0;
+        await prefs.setString('fcm_token_fail_time', DateTime.now().toIso8601String());
+        await prefs.setInt('fcm_token_fail_count', failCount + 1);
+        print('⏳ Rate limit algılandı - deneme: ${failCount + 1}');
+      }
+    }
+  }
+  
+  // 🔥 FCM TOKEN RESET - RATE LIMIT'İ ANINDA SIFIRLAR!
+  static Future<void> _resetFcmToken() async {
+    try {
+      print('🔄 FCM Token siliniyor (rate limit reset)...');
+      
+      // FCM token'ı sil - Bu Firebase'e yeni installation oluşturmasını söyler
+      await _messaging!.deleteToken();
+      print('✅ FCM Token silindi');
+      
+      // 2 saniye bekle (Firebase'in yeni token oluşturması için)
+      await Future.delayed(Duration(seconds: 2));
+      
+      // Yeni token al
+      final newToken = await _messaging!.getToken();
+      if (newToken != null) {
+        print('✅ Yeni FCM Token alındı: ${newToken.substring(0, 30)}...');
+        await _updateTokenOnServer(newToken);
+      }
+      
+      print('✅ FCM Rate limit reset tamamlandı!');
+    } catch (e) {
+      print('❌ FCM Token reset hatası: $e');
+    }
+  }
+  
+  // 🔧 MANUEL RATE LIMIT RESET - Ayarlardan çağrılabilir!
+  static Future<bool> manualResetRateLimit() async {
+    try {
+      print('🔄 Manuel FCM rate limit reset başlatılıyor...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('fcm_token_fail_time');
+      await prefs.setInt('fcm_token_fail_count', 0);
+      
+      await _resetFcmToken();
+      
+      print('✅ Manuel rate limit reset tamamlandı!');
+      return true;
+    } catch (e) {
+      print('❌ Manuel rate limit reset hatası: $e');
+      return false;
     }
   }
   

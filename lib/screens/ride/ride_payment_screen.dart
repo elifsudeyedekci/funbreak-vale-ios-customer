@@ -335,6 +335,16 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
     }
     
     // ✅ FİYAT HESAPLAMA - SAATLİK PAKET vs NORMAL YOLCULUK
+    // 🔥 DEBUG: Gelen tüm fiyat değerlerini logla!
+    print('🔍 ÖDEME DEBUG ===========================');
+    print('   rideStatus[final_price]: ${widget.rideStatus['final_price']}');
+    print('   rideStatus[estimated_price]: ${widget.rideStatus['estimated_price']}');
+    print('   rideStatus[distance_price]: ${widget.rideStatus['distance_price']}');
+    print('   rideDetails[estimated_price]: ${widget.rideDetails['estimated_price']}');
+    print('   rideStatus[location_extra_fee]: ${widget.rideStatus['location_extra_fee']}');
+    print('   _locationExtraFee: $_locationExtraFee');
+    print('========================================');
+    
     if (isHourlyPackage) {
       // ✅ KRİTİK FIX: SAATLİK PAKETTE KULLANILAN SÜREYE göre fiyat hesapla!
       final finalPrice = widget.rideStatus['final_price'];
@@ -365,8 +375,8 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
       _basePrice = _totalPrice;
       _waitingFee = 0.0;
     } else {
-      // ✅ NORMAL YOLCULUK - Backend'den gelen estimated_price kullan (zaten bekleme dahil!)
-      // ⚠️ Backend'den gelen estimated_price ZATEN bekleme dahil!
+      // ✅ NORMAL YOLCULUK - final_price ÖNCELİKLİ!
+      // 🔥 KRİTİK FIX: final_price HER ZAMAN ÖNCELİKLİ OLMALI!
       final finalPrice = widget.rideStatus['final_price'];
       final backendEstimatedPrice = widget.rideStatus['estimated_price'] ?? 
                                      widget.rideDetails['estimated_price'] ?? 
@@ -377,12 +387,22 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                                 widget.rideStatus['distance_only_price'] ?? 
                                 widget.rideDetails['base_price_only'];
       
-      // final_price varsa onu kullan (tamamlanmış yolculuk)
-      if (finalPrice != null && finalPrice > 0) {
-        _totalPrice = double.tryParse(finalPrice.toString()) ?? 0.0;
+      // 🔥 KRİTİK: final_price HER ZAMAN ÖNCELİKLİ! (GÜNCEL TUTAR)
+      // Tahmini fiyatı DEĞİL, güncel hesaplanmış fiyatı kullan!
+      if (finalPrice != null) {
+        final parsedFinalPrice = double.tryParse(finalPrice.toString()) ?? 0.0;
+        if (parsedFinalPrice > 0) {
+          _totalPrice = parsedFinalPrice;
+          print('💳 ÖDEME: final_price KULLANILIYOR: ₺${_totalPrice.toStringAsFixed(0)} (estimated_price: ₺$backendEstimatedPrice - KULLANILMIYOR!)');
+        } else {
+          // final_price 0 ise estimated_price kullan
+          _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
+          print('💳 ÖDEME: final_price=0, estimated_price kullanılıyor: ₺${_totalPrice.toStringAsFixed(0)}');
+        }
       } else {
-        // Backend'den gelen estimated_price kullan
+        // final_price null ise estimated_price kullan
         _totalPrice = double.tryParse(backendEstimatedPrice.toString()) ?? 0.0;
+        print('💳 ÖDEME: final_price NULL, estimated_price kullanılıyor: ₺${_totalPrice.toStringAsFixed(0)}');
       }
       
       // ✅ MESAFE VE BEKLEME BACKEND'DEN AYRI GELİYOR!

@@ -1672,7 +1672,7 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
               print('🔄 === MÜŞTERİ: STATUS DEĞİŞİMİ TESPİT EDİLDİ! ===');
               print('   📌 Önceki: $previousStatus');
               print('   📌 Yeni: $newStatus');
-              print('   ✅ UI GÜNCELLEND İ - Ekran yeniden render edildi!');
+              print('   ✅ UI GÜNCELLENDİ - Ekran yeniden render edildi!');
               
               // ACCEPTED → IN_PROGRESS geçişinde özel mesaj
               if (previousStatus == 'accepted' && newStatus == 'in_progress') {
@@ -1680,6 +1680,12 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                 print('   ✅ Sürücü yolculuğu başlattı');
                 print('   📲 Ekran otomatik güncellendi');
               }
+              
+              // 🔥 STATUS DEĞİŞTİĞİNDE ROTA ÇİZGİSİNİ GÜNCELLE!
+              // accepted: sürücü → müşteri
+              // in_progress: sürücü → varış noktası
+              _updateRoutePolyline();
+              print('🛣️ === MÜŞTERİ: ROTA ÇİZGİSİ GÜNCELLENDİ! ===');
             }
             
             // Persistence güncelle

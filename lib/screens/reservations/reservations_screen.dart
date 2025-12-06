@@ -1657,8 +1657,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           ),
           const SizedBox(height: 12),
           
-          // Temel Ücret
-          _buildPriceRow('Temel Ücret', baseFare),
+          // Mesafe Ücreti
+          _buildPriceRow('Mesafe Ücreti', baseFare),
           
           // Bekleme Ücreti (varsa)
           if (waitingFee > 0)

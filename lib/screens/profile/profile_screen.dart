@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart'; // 🆕 Profil resmi kalıcılığı için
+import 'package:http/http.dart' as http; // 🆕 Backend'e fotoğraf yüklemek için
 import 'dart:io';
+import 'dart:convert'; // 🆕 JSON decode için
 import '../../providers/auth_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -55,6 +58,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _vehicleColorController.text = prefs.getString('vehicle_color') ?? '';
     _vehiclePlateController.text = prefs.getString('vehicle_plate') ?? '';
     
+    // 🆕 PROFIL RESMİNİ YÜKLE (kalıcı storage'dan)
+    final savedImagePath = prefs.getString('profile_image_path');
+    if (savedImagePath != null && savedImagePath.isNotEmpty) {
+      final savedFile = File(savedImagePath);
+      if (await savedFile.exists()) {
+        setState(() {
+          _profileImage = savedFile;
+        });
+        print('✅ PROFIL: Kayıtlı profil resmi yüklendi: $savedImagePath');
+      } else {
+        print('⚠️ PROFIL: Kayıtlı dosya bulunamadı: $savedImagePath');
+      }
+    }
+    
     print('✅ PROFIL: Bilgiler yüklendi');
   }
 
@@ -68,14 +85,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       
       if (image != null) {
+        // 🆕 RESMİ KALICI STORAGE'A KOPYALA
+        final directory = await getApplicationDocumentsDirectory();
+        final String savedPath = '${directory.path}/profile_image.jpg';
+        
+        // Dosyayı kopyala
+        final File newImage = await File(image.path).copy(savedPath);
+        
+        // SharedPreferences'a path'i kaydet
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_image_path', savedPath);
+        
         setState(() {
-          _profileImage = File(image.path);
+          _profileImage = newImage;
         });
+        
+        print('✅ PROFIL: Resim yerel olarak kaydedildi: $savedPath');
+        
+        // 🆕 BACKEND'E YÜKLE (sürücü de görebilsin!)
+        await _uploadPhotoToBackend(newImage);
       }
     } catch (e) {
+      print('❌ PROFIL: Resim seçme hatası: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Resim seçilemedi: $e')),
       );
+    }
+  }
+  
+  // 🆕 Fotoğrafı backend'e yükle
+  Future<void> _uploadPhotoToBackend(File imageFile) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final customerId = authProvider.customerId;
+      
+      if (customerId == null || customerId.isEmpty) {
+        print('⚠️ PROFIL: Customer ID bulunamadı, backend yüklemesi atlanıyor');
+        return;
+      }
+      
+      print('📤 PROFIL: Backend\'e fotoğraf yükleniyor... (Customer: $customerId)');
+      
+      final uri = Uri.parse('https://admin.funbreakvale.com/api/upload_customer_photo.php');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.fields['customer_id'] = customerId;
+      request.files.add(await http.MultipartFile.fromPath('photo', imageFile.path));
+      
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      
+      print('📥 PROFIL: Backend yanıtı: $responseBody');
+      
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(responseBody);
+        if (jsonResponse['success'] == true) {
+          print('✅ PROFIL: Fotoğraf backend\'e yüklendi! URL: ${jsonResponse['photo_url']}');
+          
+          // SharedPreferences'a backend URL'i de kaydet
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('profile_photo_url', jsonResponse['photo_url'] ?? '');
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profil fotoğrafı güncellendi'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          print('⚠️ PROFIL: Backend hatası: ${jsonResponse['message']}');
+        }
+      } else {
+        print('❌ PROFIL: HTTP hatası: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ PROFIL: Backend yükleme hatası: $e');
     }
   }
 
@@ -201,55 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               themeProvider,
             ),
             
-            const SizedBox(height: 32),
-            
-            // Araç Bilgileri Başlığı
-            Text(
-              'Araç Bilgileri',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: themeProvider.isDarkMode ? Colors.white : Colors.black,
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildProfileField(
-              'Araç Markası',
-              _vehicleMakeController,
-              Icons.directions_car,
-              themeProvider,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildProfileField(
-              'Araç Modeli',
-              _vehicleModelController,
-              Icons.car_rental,
-              themeProvider,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildProfileField(
-              'Araç Rengi',
-              _vehicleColorController,
-              Icons.palette,
-              themeProvider,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildProfileField(
-              'Araç Plakası',
-              _vehiclePlateController,
-              Icons.confirmation_number,
-              themeProvider,
-            ),
-            
-            // Yasal linkler KALDIRILDI - Ayarlar bölümünde var
+            // Araç Bilgileri KALDIRILDI - Müşteri talebi ile
             
             const SizedBox(height: 40),
             

@@ -67,6 +67,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _selectedTimeOption = 'Hemen';
   String _selectedServiceType = 'vale'; // 'vale' or 'hourly'
   double? _estimatedPrice;
+  double _estimatedDistance = 0.0; // 🆕 Tahmini mesafe (km)
+  double _locationExtraFee = 0.0; // 🆕 Özel konum ücreti
+  String? _locationExtraFeeName; // 🆕 Özel konum adı (pickup veya destination)
   List<HourlyPackage> _hourlyPackages = [];
   HourlyPackage? _selectedHourlyPackage;
   double? _originalPrice;
@@ -437,27 +440,59 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         double totalLocationFee = pickupFee + destinationFee + waypointsFee;
         double totalPrice = distancePrice + totalLocationFee;
         
+        // 🆕 Özel konum adını belirle (pickup veya destination hangisiyse)
+        String? locationName;
+        if (pickupFee > 0) locationName = 'Alış konumu özel bölge';
+        if (destinationFee > 0) locationName = (locationName != null) ? '$locationName + Varış konumu özel bölge' : 'Varış konumu özel bölge';
+        
         setState(() {
           _estimatedPrice = totalPrice;
           _originalPrice = totalPrice;
+          _estimatedDistance = totalDistance; // 🆕 Tahmini mesafe
+          _locationExtraFee = totalLocationFee; // 🆕 Özel konum ücreti
+          _locationExtraFeeName = locationName; // 🆕 Özel konum adı
           _isLoading = false;
         });
         
         print('✅ Ara duraklı fiyat (Özel Konum Dahil): ₺$totalPrice (Mesafe: ₺$distancePrice, Özel Konum: ₺$totalLocationFee)');
       } else {
-        // Normal fiyat hesaplama (ara durak yok) - PricingService zaten özel konum ekliyor
-        double totalPrice = await PricingService.calculateTotalPrice(
+        // Normal fiyat hesaplama (ara durak yok) - PricingService'den detaylı bilgi al
+        final pricingData = await PricingService.getPricingData();
+        
+        // Mesafe hesapla
+        double distance = await PricingService.calculateRouteDistance(
           originLat: _pickupLocation!.latitude,
           originLng: _pickupLocation!.longitude,
-          destinationLat: _destinationLocation!.latitude,
-          destinationLng: _destinationLocation!.longitude,
+          destLat: _destinationLocation!.latitude,
+          destLng: _destinationLocation!.longitude,
         );
+        
+        // Mesafe fiyatı
+        double distancePrice = PricingService.calculateDistancePrice(distance, pricingData?['distance_pricing']);
+        
+        // Özel konum ücretleri
+        double pickupFee = PricingService.checkLocationPricing(_pickupLocation!.latitude, _pickupLocation!.longitude, pricingData?['location_pricing']);
+        double destinationFee = PricingService.checkLocationPricing(_destinationLocation!.latitude, _destinationLocation!.longitude, pricingData?['location_pricing']);
+        double totalLocationFee = pickupFee + destinationFee;
+        
+        // Toplam fiyat
+        double totalPrice = distancePrice + totalLocationFee;
+        
+        // 🆕 Özel konum adını belirle
+        String? locationName;
+        if (pickupFee > 0) locationName = 'Alış konumu özel bölge';
+        if (destinationFee > 0) locationName = (locationName != null) ? '$locationName + Varış konumu özel bölge' : 'Varış konumu özel bölge';
 
         setState(() {
           _estimatedPrice = totalPrice;
           _originalPrice = totalPrice;
+          _estimatedDistance = distance; // 🆕 Tahmini mesafe
+          _locationExtraFee = totalLocationFee; // 🆕 Özel konum ücreti
+          _locationExtraFeeName = locationName; // 🆕 Özel konum adı
           _isLoading = false;
         });
+        
+        print('✅ Normal fiyat: ₺$totalPrice (Mesafe: ${distance.toStringAsFixed(1)} km = ₺$distancePrice, Özel Konum: ₺$totalLocationFee)');
       }
     } catch (e) {
       print('Fiyat hesaplama hatası: $e');
@@ -692,7 +727,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 child: _buildServiceTypeButton(
                                   'vale',
                                   'Mesafe Bazlı (KM)',
-                                  Icons.directions_car,
+                                  Icons.route, // 🆕 Mesafe ikonu (araba yerine)
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -5117,7 +5152,70 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 10), // 16 → 10
           
-          // TAHMİNİ FİYAT KALDIRILDI - SADECE TUTAR GÖZÜKSÜN
+          // 🆕 TAHMİNİ MESAFE
+          if (_selectedServiceType == 'vale' && _estimatedDistance > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.route, size: 16, color: Colors.blue),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Tahmini Mesafe:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: themeProvider.isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${_estimatedDistance.toStringAsFixed(1)} km',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          
+          // 🆕 ÖZEL KONUM ÜCRETİ (varsa)
+          if (_locationExtraFee > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _locationExtraFeeName ?? 'Özel Konum Ücreti:',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange[700],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '+₺${_locationExtraFee.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           
           // İNDİRİM
           if (_discountAmount > 0) ...[
