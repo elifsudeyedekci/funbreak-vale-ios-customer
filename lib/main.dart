@@ -158,40 +158,16 @@ void main() async {
 }
 
 Future<void> _initializeFirebaseMessaging() async {
-  // ✅ SADECE FCM TOKEN KAYDET - BİLDİRİMLER AdvancedNotificationService TARAFINDAN YÖNETİLİYOR!
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  // ✅ TÜM FCM İŞLEMLERİ AdvancedNotificationService TARAFINDAN YAPILIYOR!
+  // ⚠️ BURADA requestPermission() ÇAĞIRMIYORUZ - "Too many server requests" hatasını önlemek için!
+  // AdvancedNotificationService.initialize() zaten _requestPermissions() çağırıyor.
   
-  try {
-    // ⚠️ iOS'TA ÖNCE PERMİSSİON AL!
-    if (Platform.isIOS) {
-      print('📱 iOS FCM Token alınmadan önce permission isteniyor...');
-      final settings = await messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-      print('✅ iOS FCM Permission: ${settings.authorizationStatus}');
-      print('   Alert: ${settings.alert}');
-      print('   Badge: ${settings.badge}');
-      print('   Sound: ${settings.sound}');
-      
-      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
-        print('⚠️ iOS bildirim izni verilmedi - Token alınamaz!');
-        print('💡 Settings → Notifications → FunBreak Vale → Allow Notifications açık olmalı!');
-        return;
-      }
-    }
-    
-    // ✅ TOKEN ALMA İŞLEMİ AdvancedNotificationService TARAFINDAN YAPILACAK!
-    // Rate limit (Too many server requests) hatasını önlemek için burada token almıyoruz
-    print('✅ FCM permission alındı - Token alma AdvancedNotificationService tarafından yapılacak');
-  } catch (e) {
-    print('⚠️ [MÜŞTERİ] FCM permission hatası: $e');
-  }
+  print('✅ FCM setup - AdvancedNotificationService tüm işlemleri yönetiyor');
+  print('   📱 Permission: AdvancedNotificationService._requestPermissions()');
+  print('   🔑 Token: AdvancedNotificationService._getFcmTokenDirect()');
+  
+  // NOT: Eski kod "Too many server requests" hatasına neden oluyordu
+  // requestPermission() iki kez çağrılıyordu: main.dart + AdvancedNotificationService
 }
 
 // MÜŞTERİ FCM TOKEN KAYDETME - ŞOFÖR GİBİ ÇALIŞIYOR!
