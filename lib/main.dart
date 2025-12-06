@@ -269,28 +269,12 @@ Future<void> _saveCustomerFCMToken(String fcmToken) async {
 Future<void> requestPermissions() async {
   try {
     if (Platform.isIOS) {
-      // iOS için özel izin sistemi
+      // ✅ iOS için bildirim izni AdvancedNotificationService tarafından istenecek!
+      // "Too many server requests" hatasını önlemek için burada requestPermission() ÇAĞIRMIYORUZ!
       print('📱 iOS izinleri isteniyor...');
-      
-      // Bildirim izni (iOS için Firebase üzerinden)
-      final messaging = FirebaseMessaging.instance;
-      final settings = await messaging.requestPermission(
-        alert: true,
-        announcement: true,
-        badge: true,
-        carPlay: false,
-        criticalAlert: true,
-        provisional: false,
-        sound: true,
-      );
-      
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print('✅ iOS bildirim izni verildi');
-      } else {
-        print('⚠️ iOS bildirim izni reddedildi');
-      }
+      print('📱 iOS: Bildirim izni AdvancedNotificationService tarafından istenecek');
     
-    // Konum izni
+    // Konum izni (sadece konum, bildirim değil)
       await Permission.locationWhenInUse.request();
       await Permission.locationAlways.request();
       
