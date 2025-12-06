@@ -186,11 +186,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if (rideStatus == 'accepted' || rideStatus == 'in_progress') {
             print('✅ Vale KABUL ETTİ ($rideStatus) - yolculuk ekranı açılıyor');
           
-          // Otomatik yolculuk ekranına git
-          Navigator.pushNamed(context, '/modern_active_ride', arguments: {
-            'rideDetails': activeRide,
-            'isFromBackend': true,
-          });
+            // ✅ Otomatik yolculuk ekranına git - MOUNTED KONTROL + DOĞRU NAVIGATION
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ModernActiveRideScreen(rideDetails: activeRide),
+                ),
+              );
+            }
           } else if (rideStatus == 'scheduled' || rideStatus == 'pending') {
             print('📅 Bekleyen yolculuk ($rideStatus) - Yolculuk ekranı AÇILMAYACAK!');
             // Yolculuk ekranı açılmaz - kullanıcı rezervasyonlardan görebilir

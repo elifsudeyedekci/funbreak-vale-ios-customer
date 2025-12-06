@@ -513,7 +513,7 @@ class _ContractUpdateScreenState extends State<ContractUpdateScreen> {
     return {
       'platform': platform,
       'os_version': Platform.operatingSystemVersion,
-      'app_version': '2.0.0',
+      'app_version': '4.0.0',
       'device_fingerprint': fingerprint,
       'user_agent': 'FunBreak Vale Customer/$platform ${Platform.operatingSystemVersion}',
       'ip_address': 'auto',
@@ -1318,7 +1318,7 @@ Müşteri Hizmetleri: 7/24 (mobil uygulama canlı destek)
 
 ===============================================================================
 
-Versiyon: 2.0''';
+Versiyon: 4.0''';
   }
 
   String _getUserAgreementText() {
@@ -1702,6 +1702,40 @@ olduğunu kabul eder.
 herhangi bir sorumluluğu olmadığını ve FunBreak Vale'ye karşı Vale'nin 
 sürüşünden kaynaklanan durumlar için hak ve tazmin talebinde 
 bulunamayacağını kabul, beyan ve taahhüt eder.
+
+FunBreak Vale'den şoför hizmeti alan Müşteri, aracını 3. bir şahsa kendi 
+isteği ile kullandırdığını ve araç sahibi veya kullanıcısı olarak buna bağlı 
+hukuki sorumluluğunun farkında olduğunu ve bu sorumluluğu bizzat kendisinin 
+aldığını beyan ve kabul eder.
+
+Hizmet talep edilen aracın kasko ve zorunlu trafik sigortası yok ise 
+FunBreak hizmet vermeme hakkına sahiptir.
+
+Hizmet esnasında oluşacak yangın, kaza veya hasarda Müşteri hasarın 
+giderilmesi için kendi araç sigortalarını kullanacağını, meydana gelen maddi 
+veya manevi tüm zararlar ve tazminatlardan bizzat sorumlu olduğunu bunlar 
+için FunBreak Vale'den hiçbir maddi/manevi tazminat talebinde 
+bulunmayacağını, bu haklardan feragat ettiğini beyan ve taahhüt eder.
+
+Müşteri; FunBreak Vale'nin ikame araç temin edilmesinden ve/veya hasarlı 
+aracın değer kaybının karşılanmasından sorumlu olmadığını, aracın boyasında 
+ön ve arka tamponlar ve çamurluklarda bulunan çiziklerden veya araç içindeki 
+herhangi bir hasardan FunBreak Vale'nin sorumlu olmadığını, bunlara ilişkin 
+FunBreak Vale'den hiçbir maddi/manevi tazminat talebinde bulunmayacağını, 
+bu haklardan feragat ettiğini beyan ve taahhüt eder.
+
+Aracınızın herhangi bir kazaya karışması durumunda aracınıza ait kasko ve 
+trafik poliçesi devreye girecektir. Araçlarda veya kişilerde oluşan sigorta 
+kapsamı üstündeki hasarlar dahil tüm sorumluluk size aittir. Bu durumda 
+FunBreak Vale ikame araç ve değer kaybı dahil herhangi bir sorumluluk 
+kabul etmez.
+
+Müşteri; FunBreak Vale tarafından sunulan diğer hizmetlerinin ifası sırasında 
+FunBreak Vale'in asıl tedarikçiler, şoför ile Müşteri arasında sadece bir 
+aracı olarak hizmet sunduğunu bu nedenle meydana gelebilecek maddi manevi 
+zararlar ve hasarlar ile ilgili olarak FunBreak Vale'in herhangi bir 
+sorumluluğu olmadığını kabul ile ilgili her türlü haklarından feragat 
+ettiğini beyan ve taahhüt eder.
 
 5.1.2. Yolcu, transferi ile ilgili aracından veya sair herhangi bir husustan 
 kaynaklanan durumların kendi sorumluluğunda olduğunu, zarar ve ziyanın 
@@ -2111,7 +2145,7 @@ Web               : www.funbreakvale.com
 
 ===============================================================================
 
-Versiyon: 2.0''';
+Versiyon: 4.0''';
   }
 
   String _getCommercialText() {
@@ -2311,7 +2345,7 @@ Web Sayfası       : www.funbreakvale.com
 
 ===============================================================================
 
-Versiyon: 2.0''';
+Versiyon: 4.0''';
   }
 }
 

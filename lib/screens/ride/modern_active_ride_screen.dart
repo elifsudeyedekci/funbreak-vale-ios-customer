@@ -1512,29 +1512,37 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
                   if (mounted) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) {
-                        // ✅ KRİTİK FIX: GÜNCEL HESAPLANAN TUTARI GÖNDER!
-                        // Backend'den gelen final_price varsa onu kullan, yoksa client hesaplasın
-                        final backendFinalPrice = _currentRideStatus['final_price'];
+                        // ✅ KRİTİK FIX: BACKEND'DEN GELEN DEĞERLER ÖNCELİKLİ!
+                        // check_ride_status.php artık tüm fiyat detaylarını döndürüyor
+                        final backendFinalPrice = checkData['final_price'] ?? _currentRideStatus['final_price'];
+                        final backendDistancePrice = checkData['distance_price'] ?? _currentRideStatus['distance_price'];
+                        final backendWaitingFee = checkData['waiting_fee'] ?? _currentRideStatus['waiting_fee'];
+                        final backendTotalDistance = checkData['total_distance'] ?? _currentRideStatus['total_distance'];
+                        final backendWaitingMinutes = checkData['waiting_minutes'] ?? _currentRideStatus['waiting_minutes'];
+                        final backendLocationExtraFee = checkData['location_extra_fee'] ?? _currentRideStatus['location_extra_fee'];
+                        final backendServiceType = checkData['service_type'] ?? _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
+                        
                         final calculatedTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
                         final currentTotal = (backendFinalPrice != null && backendFinalPrice > 0) 
                             ? double.tryParse(backendFinalPrice.toString()) ?? calculatedTotal
                             : calculatedTotal;
                         
-                        // GÜNCEL ride status'ı oluştur - TÜM GÜNCEL DEĞERLERİ EKLE!
+                        // GÜNCEL ride status'ı oluştur - BACKEND DEĞERLERİ ÖNCELİKLİ!
                         final completedRideStatus = Map<String, dynamic>.from(_currentRideStatus);
                         completedRideStatus['status'] = 'completed';
                         
-                        // ✅ KRİTİK: GÜNCEL DEĞERLERİ EKLE - Ödeme ekranı bunları kullanacak!
+                        // ✅ KRİTİK: BACKEND DEĞERLERİ ÖNCELİKLİ - Ödeme ekranı bunları kullanacak!
                         completedRideStatus['final_price'] = currentTotal > 0 ? currentTotal : calculatedTotal;
-                        completedRideStatus['total_distance'] = _getCurrentKm(); // Güncel KM
-                        completedRideStatus['waiting_minutes'] = _getWaitingMinutes(); // Güncel bekleme
-                        completedRideStatus['ride_duration_hours'] = _getUsedHours(); // Saatlik paket için süre
-                        completedRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
-                        // ✅ ÖZEL KONUM ÜCRETİ - Backend'den gelen değeri kullan!
-                        completedRideStatus['location_extra_fee'] = _currentRideStatus['location_extra_fee'] ?? 0;
+                        completedRideStatus['total_distance'] = backendTotalDistance ?? _getCurrentKm();
+                        completedRideStatus['waiting_minutes'] = backendWaitingMinutes ?? _getWaitingMinutes();
+                        completedRideStatus['ride_duration_hours'] = _getUsedHours();
+                        completedRideStatus['service_type'] = backendServiceType;
+                        completedRideStatus['location_extra_fee'] = backendLocationExtraFee ?? 0;
+                        completedRideStatus['distance_price'] = backendDistancePrice;
+                        completedRideStatus['waiting_fee'] = backendWaitingFee;
                         
-                        final locationFee = _currentRideStatus['location_extra_fee'] ?? 0;
-                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Güncel Tutar: ₺$currentTotal, KM: ${_getCurrentKm()}, Bekleme: ${_getWaitingMinutes()} dk, Süre: ${_getUsedHours().toStringAsFixed(1)} saat, Özel Konum: ₺$locationFee');
+                        final locationFee = backendLocationExtraFee ?? 0;
+                        print('💰 [MÜŞTERİ] Ödeme ekranına yönlendiriliyor - Backend Final: ₺$backendFinalPrice, Distance: ₺$backendDistancePrice, Waiting: ₺$backendWaitingFee, KM: $backendTotalDistance, Özel Konum: ₺$locationFee');
                         
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
@@ -1695,16 +1703,25 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
             if (status == 'completed') {
               _trackingTimer?.cancel();
               if (mounted) {
-                // ✅ GÜNCEL DEĞERLERİ EKLE - Ödeme ekranı doğru tutar göstersin!
+                // ✅ KRİTİK: BACKEND DEĞERLERİ ÖNCELİKLİ - Ödeme ekranı doğru tutar göstersin!
                 final paymentRideStatus = Map<String, dynamic>.from(_currentRideStatus);
                 final calculatedTotal = double.tryParse(_calculateCurrentTotal()) ?? 0.0;
-                paymentRideStatus['final_price'] = paymentRideStatus['final_price'] ?? calculatedTotal;
-                paymentRideStatus['total_distance'] = _getCurrentKm();
-                paymentRideStatus['waiting_minutes'] = _getWaitingMinutes();
+                
+                // Backend'den gelen değerleri öncelikli kullan
+                final backendFinalPrice = _currentRideStatus['final_price'];
+                paymentRideStatus['final_price'] = (backendFinalPrice != null && backendFinalPrice > 0) 
+                    ? backendFinalPrice : calculatedTotal;
+                paymentRideStatus['total_distance'] = _currentRideStatus['total_distance'] ?? _getCurrentKm();
+                paymentRideStatus['waiting_minutes'] = _currentRideStatus['waiting_minutes'] ?? _getWaitingMinutes();
                 paymentRideStatus['ride_duration_hours'] = _getUsedHours();
                 paymentRideStatus['service_type'] = _currentRideStatus['service_type'] ?? widget.rideDetails['service_type'] ?? 'vale';
                 // ✅ ÖZEL KONUM ÜCRETİ - Backend'den gelen değeri kullan!
                 paymentRideStatus['location_extra_fee'] = _currentRideStatus['location_extra_fee'] ?? 0;
+                // ✅ MESAFE VE BEKLEME ÜCRETİ - Backend'den gelen değerleri kullan!
+                paymentRideStatus['distance_price'] = _currentRideStatus['distance_price'];
+                paymentRideStatus['waiting_fee'] = _currentRideStatus['waiting_fee'];
+                
+                print('💰 [MÜŞTERİ] Polling completed - Backend değerleri: final_price=${paymentRideStatus['final_price']}, distance_price=${paymentRideStatus['distance_price']}, waiting_fee=${paymentRideStatus['waiting_fee']}');
                 
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(

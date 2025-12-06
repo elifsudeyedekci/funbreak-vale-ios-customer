@@ -699,7 +699,7 @@ F. BAŞVURU YÖNTEMİ
 
 Haklarınızı kullanmak için info@funbreakvale.com adresine yazılı başvuruda bulunabilirsiniz.
 
-Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
+Versiyon: 4.0 | Tarih: 28 Kasım 2025''';
   }
   
   String _getUserAgreementText() {
@@ -779,7 +779,7 @@ FunBreak Global Teknoloji Limited Şirketi
 Mersis No: 0388195898700001
 info@funbreakvale.com | www.funbreakvale.com
 
-Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
+Versiyon: 4.0 | Tarih: 28 Kasım 2025''';
   }
   
   String _getCommercialText() {
@@ -810,7 +810,7 @@ FunBreak Global Teknoloji Limited Şirketi
 Armağanevler Mah. Ortanca Sk. No: 69 İç Kapı No: 22 Ümraniye/İstanbul
 Mersis No: 0388195898700001
 
-Versiyon: 2.0 | Tarih: 28 Kasım 2025''';
+Versiyon: 4.0 | Tarih: 28 Kasım 2025''';
   }
 
   @override

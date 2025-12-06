@@ -542,20 +542,29 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   ),
                   const SizedBox(height: 8),
                   
-                  _buildPaymentRow('🚗 Yolculuk Ücreti', '₺${_basePrice.toStringAsFixed(2)}'),
-                  if (_waitingMinutes > _waitingFreeMinutes && _hourlyPackageLabel.isEmpty)
-                    _buildPaymentRow('⏰ Bekleme Ücreti', '₺${_waitingFee.toStringAsFixed(2)} ($_waitingMinutes dk)', subtitle: 'İlk $_waitingFreeMinutes dk ücretsiz, sonrası her $_waitingIntervalMinutes dk ₺${_waitingFeePerInterval.toStringAsFixed(0)}'),
-                  if (_waitingMinutes <= _waitingFreeMinutes && _waitingMinutes > 0 && _hourlyPackageLabel.isEmpty)
-                    _buildPaymentRow('⏰ Bekleme (Ücretsiz)', '$_waitingMinutes dakika', isFree: true),
-                  // ✅ ÖZEL KONUM ÜCRETİ GÖSTERİMİ (Komisyonsuz!)
+                  // ✅ SAATLİK PAKET İSE FARKLI GÖSTER
+                  if (_hourlyPackageLabel.isNotEmpty) ...[
+                    _buildPaymentRow('📦 $_hourlyPackageLabel', '₺${_basePrice.toStringAsFixed(0)}', subtitle: 'Saatlik pakette bekleme ücreti alınmaz'),
+                  ] else ...[
+                    // ✅ MESAFE ÜCRETİ (KM bilgisi ile)
+                    _buildPaymentRow('📏 Mesafe Ücreti', '₺${_basePrice.toStringAsFixed(0)}', subtitle: '${_distance.toStringAsFixed(1)} km'),
+                    
+                    // ✅ BEKLEME ÜCRETİ - HER ZAMAN GÖSTER
+                    if (_waitingMinutes > _waitingFreeMinutes)
+                      _buildPaymentRow('⏰ Bekleme Ücreti', '₺${_waitingFee.toStringAsFixed(0)}', subtitle: '$_waitingMinutes dakika (ilk $_waitingFreeMinutes dk ücretsiz)')
+                    else if (_waitingMinutes > 0)
+                      _buildPaymentRow('⏰ Bekleme', 'Ücretsiz', subtitle: '$_waitingMinutes dakika (ilk $_waitingFreeMinutes dk ücretsiz)', isFree: true)
+                    else
+                      _buildPaymentRow('⏰ Bekleme', 'Ücretsiz', subtitle: 'Bekleme yapılmadı', isFree: true),
+                  ],
+                  
+                  // ✅ ÖZEL KONUM ÜCRETİ GÖSTERİMİ (varsa)
                   if (_locationExtraFee > 0)
                     _buildPaymentRow(
                       '🗺️ Özel Konum Ücreti', 
-                      '+₺${_locationExtraFee.toStringAsFixed(2)}',
+                      '+₺${_locationExtraFee.toStringAsFixed(0)}',
                       subtitle: _specialLocation != null ? _specialLocation!['name'] ?? 'Özel Bölge' : 'Özel Bölge',
                     ),
-                  if (_hourlyPackageLabel.isNotEmpty)
-                    _buildPaymentRow('📦 $_hourlyPackageLabel', 'Paket fiyatına dahil', subtitle: 'Saatlik pakette bekleme ücreti alınmaz'),
                   if (_discountApplied && _discountAmount > 0)
                     _buildPaymentRow('🎁 İndirim', '-₺${_discountAmount.toStringAsFixed(2)}', subtitle: 'Kod: ${_discountCodeController.text}'),
                   const Divider(thickness: 2),

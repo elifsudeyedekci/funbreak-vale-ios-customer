@@ -1497,7 +1497,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     [
                       'Nereden: ${ride['pickup_address'] ?? 'Belirtilmemiş'}',
                       ..._parseWaypoints(ride['waypoints']),
-                      'Nereye: ${ride['destination_address'] ?? 'Belirtilmemiş'}',
+                      'Nereye (Seçilen): ${ride['destination_address'] ?? 'Belirtilmemiş'}',
+                      // ✅ GERÇEK BIRAKIŞ KONUMU - Sürücünün bıraktığı yer
+                      '📍 Gerçek Bırakış: ${_getActualDropoffText(ride)}',
                       'Mesafe: ${distance > 0 ? '${distance.toStringAsFixed(1)} km' : 'Bilinmiyor'}',
                     ],
                   ),
@@ -1861,6 +1863,23 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     } catch (e) {
       print('⚠️ Waypoints parse hatası (geçmiş yolculuklar): $e');
       return [];
+    }
+  }
+
+  // ✅ GERÇEK BIRAKIŞ KONUMU METNİ
+  String _getActualDropoffText(Map<String, dynamic> ride) {
+    final dropoffLocationName = ride['dropoff_location_name']?.toString() ?? '';
+    final dropoffLocationFee = double.tryParse(ride['dropoff_location_fee']?.toString() ?? '0') ?? 0.0;
+    
+    if (dropoffLocationName.isNotEmpty) {
+      // Sürücü özel konumda bıraktı
+      return '$dropoffLocationName (Özel Konum)';
+    } else if (dropoffLocationFee > 0) {
+      // Özel konum ücreti var ama isim yok
+      return 'Özel Konum Bölgesi';
+    } else {
+      // Normal bırakış - seçilen hedef ile aynı
+      return 'Seçilen hedef ile aynı';
     }
   }
 

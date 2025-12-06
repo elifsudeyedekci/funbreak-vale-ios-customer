@@ -208,7 +208,7 @@ Havalimanı, marina ve benzeri lokasyonlarda ek ücret uygulanabilir.
 6. YETKİLİ MAHKEME
 Uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri ve İcra Müdürlükleri yetkilidir.
 
-Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 4.0
 ''';
     } else {
       return '''
@@ -305,7 +305,7 @@ Bu sözleşme, müşterinin elektronik ortamda onay vermesiyle yürürlüğe gir
 
 İşbu sözleşme, Ön Bilgilendirme Formu ile birlikte geçerlidir.
 
-Son Güncelleme: 28 Kasım 2025 | Versiyon: 2.0
+Son Güncelleme: 28 Kasım 2025 | Versiyon: 4.0
 ''';
     }
   }

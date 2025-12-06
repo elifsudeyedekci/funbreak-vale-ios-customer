@@ -143,18 +143,12 @@ class _MainScreenState extends State<MainScreen> {
           
           // YOLCULUK EKRANINA GİT!
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/modern_active_ride', arguments: {
-              'ride_id': activeRide['id'],
-              'status': activeRide['status'],
-              'driver_name': activeRide['driver_name'],
-              'driver_phone': activeRide['driver_phone'],
-              'driver_rating': activeRide['driver_rating'],
-              'pickup_address': activeRide['pickup_address'],
-              'destination_address' : activeRide['destination_address'],
-              'estimated_price': activeRide['estimated_price'],
-              'scheduled_time': activeRide['scheduled_time'],
-              'manual_assignment': activeRide['manual_assignment'] ?? false
-            });
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ModernActiveRideScreen(rideDetails: activeRide),
+              ),
+            );
             print('🎯 Backend aktif yolculuk nedeniyle modern ekrana yönlendirildi');
           }
           
