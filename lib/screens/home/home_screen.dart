@@ -249,8 +249,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _animationController.dispose();
     // TİMER TEMİZLEME - MEMORY LEAK ÖNLEME
     _driverSearchTimer?.cancel();
+    _realTimeSearchTimer?.cancel(); // GERÇEK ZAMANLI ARAMA TIMER!
     _searchDebounce?.cancel(); // SEARCH DEBOUNCE TIMER!
     _driverSearchTimer = null;
+    _realTimeSearchTimer = null;
     super.dispose();
   }
 
@@ -2097,14 +2099,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   // GERÇEK ZAMANLI SÜRÜCÜ ARAMA VE KABUL TAKİBİ - PANEL API ENTEGRASYONU! (2s interval - HIZLI!)
+  Timer? _realTimeSearchTimer; // Timer referansı tutulacak
+  
   void _startRealTimeDriverSearch(BuildContext modalContext) {
     // ÖNCE ESKİ TALEPLERİ TEMİZLE!
     _cleanupExpiredRequestsCustomer();
     
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      // İptal kontrolü
-      if (_searchCancelled || !modalContext.mounted) {
+    // Önceki timer varsa iptal et
+    _realTimeSearchTimer?.cancel();
+    
+    _realTimeSearchTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      // İptal kontrolü - ANA WIDGET MOUNTED KONTROL!
+      if (_searchCancelled || !mounted) {
         timer.cancel();
+        _realTimeSearchTimer = null;
         return;
       }
       
