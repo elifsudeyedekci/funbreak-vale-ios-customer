@@ -536,9 +536,13 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '💳 Ödeme Detayları',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 13, 
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.isDarkMode ? Colors.white : Colors.black87, // ✅ Beyaz renk
+                    ),
                   ),
                   const SizedBox(height: 8),
                   
@@ -549,13 +553,12 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                     // ✅ MESAFE ÜCRETİ (KM bilgisi ile)
                     _buildPaymentRow('📏 Mesafe Ücreti', '₺${_basePrice.toStringAsFixed(0)}', subtitle: '${_distance.toStringAsFixed(1)} km'),
                     
-                    // ✅ BEKLEME ÜCRETİ - HER ZAMAN GÖSTER
+                    // ✅ BEKLEME ÜCRETİ - SADECE BEKLEME VARSA GÖSTER!
                     if (_waitingMinutes > _waitingFreeMinutes)
                       _buildPaymentRow('⏰ Bekleme Ücreti', '₺${_waitingFee.toStringAsFixed(0)}', subtitle: '$_waitingMinutes dakika (ilk $_waitingFreeMinutes dk ücretsiz)')
                     else if (_waitingMinutes > 0)
-                      _buildPaymentRow('⏰ Bekleme', 'Ücretsiz', subtitle: '$_waitingMinutes dakika (ilk $_waitingFreeMinutes dk ücretsiz)', isFree: true)
-                    else
-                      _buildPaymentRow('⏰ Bekleme', 'Ücretsiz', subtitle: 'Bekleme yapılmadı', isFree: true),
+                      _buildPaymentRow('⏰ Bekleme', 'Ücretsiz', subtitle: '$_waitingMinutes dakika (ilk $_waitingFreeMinutes dk ücretsiz)', isFree: true),
+                    // ✅ Bekleme yapılmadıysa (_waitingMinutes == 0) HİÇ GÖSTERİLMEYECEK!
                   ],
                   
                   // ✅ ÖZEL KONUM ÜCRETİ GÖSTERİMİ (varsa)
@@ -858,7 +861,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   backgroundColor: _paymentCompleted 
                     ? Colors.green[600] 
                     : const Color(0xFFFFD700),
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black, // ✅ Sarı içi siyah yazı
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -866,26 +869,26 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   elevation: 5,
                 ),
                 child: _isProcessingPayment 
-                  ? const Row(
+                  ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
                         ),
                         SizedBox(width: 12),
-                        Text('💳 Ödeme işleniyor...'),
+                        Text('💳 Ödeme işleniyor...', style: TextStyle(color: Colors.black)),
                       ],
                     )
                   : _paymentCompleted
                     ? const Text(
                         '✅ ÖDEME TAMAMLANDI',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                       )
                     : Text(
                         '💳 ₺${(_totalPrice - _discountAmount).toStringAsFixed(2)} ÖDE',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                       ),
               ),
             ),
@@ -924,6 +927,9 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
   }
   
   Widget _buildPaymentRow(String label, String value, {bool isTotal = false, bool isFree = false, String? subtitle}) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final textColor = themeProvider.isDarkMode ? Colors.white : Colors.black87;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -937,7 +943,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                 style: TextStyle(
                   fontSize: isTotal ? 16 : 14,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-                  color: isTotal ? const Color(0xFFFFD700) : Colors.black87,
+                  color: isTotal ? const Color(0xFFFFD700) : textColor, // ✅ Beyaz renk
                 ),
               ),
               Text(
@@ -948,8 +954,8 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                   color: isTotal 
                     ? const Color(0xFFFFD700)
                     : isFree 
-                      ? Colors.green[600]
-                      : Colors.black87,
+                      ? Colors.green[400] // ✅ Daha açık yeşil
+                      : textColor, // ✅ Beyaz renk
                 ),
               ),
             ],
@@ -958,7 +964,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600]), // ✅ Daha açık gri
             ),
           ],
         ],

@@ -1102,11 +1102,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         const SizedBox(height: 8),
                                 Row(
                                   children: [
-            Expanded(child: _buildModernTimeOption('Hemen\n(Tahmini 30 Dk)')),
+            Expanded(flex: 1, child: _buildModernTimeOption('Hemen\n(Tahmini 30 Dk)')),
             const SizedBox(width: 6),
-            Expanded(child: _buildModernTimeOption('1 Saat Sonra')),
+            Expanded(flex: 1, child: _buildModernTimeOption('1 Saat\nSonra')),
             const SizedBox(width: 6),
-            Expanded(child: _buildModernTimeOption('Özel Saat')),
+            Expanded(flex: 1, child: _buildModernTimeOption('Özel\nSaat')),
                                   ],
                                 ),
                               ],
@@ -1123,7 +1123,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _selectedTimeOption = option;
         });
         
-        if (option == 'Özel Saat') {
+        if (option == 'Özel\nSaat') {
           _showCustomTimePicker();
         } else {
           setState(() {
@@ -1696,7 +1696,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         } : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFD700),
-                          foregroundColor: Colors.white,
+                          foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -1705,13 +1705,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.flash_auto, size: 24),
+                            const Icon(Icons.flash_auto, size: 24, color: Colors.black),
                             const SizedBox(width: 12),
                             Text(
                               _selectedServiceType == 'vale' ? 'Vale Çağır' : 'Saatlik Paket Al',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
                             ),
                           ],
@@ -1959,8 +1960,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildTripDetailRow(String title, String value, IconData icon, Color iconColor) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Row(
       children: [
         Container(
@@ -1980,16 +1979,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  color: Colors.grey[400], // ✅ Her zaman açık gri (dark arka planda görünsün)
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
-                  color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                  color: Colors.white, // ✅ Her zaman beyaz (dark arka planda görünsün)
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
@@ -3809,7 +3808,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black, // ✅ Sarı içi siyah yazı
                   ),
                 ),
               ),
@@ -4453,7 +4452,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final serverTime = await TimeService.getServerTime();
           print('🌐 Sunucu saati: $serverTime');
           
-          if (_selectedTimeOption == '1 Saat Sonra') {
+          if (_selectedTimeOption == '1 Saat\nSonra') {
             scheduledDateTime = serverTime.add(const Duration(hours: 1));
           } else if (_selectedTimeOption == '2 Saat Sonra') {
             scheduledDateTime = serverTime.add(const Duration(hours: 2));
@@ -5282,7 +5281,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black, // ✅ Sarı içi siyah yazı
                   ),
                 ),
               ),
@@ -7072,9 +7071,9 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey,
+                  color: Colors.grey[400], // ✅ Daha açık gri
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -7083,7 +7082,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: Colors.white, // ✅ Beyaz yazı
                 ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -7337,7 +7336,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
     
     // Otomatik seçenekler - SERVER SAATİ KULLAN!
     DateTime calculatedTime;
-    if (_selectedTimeOption == '1 Saat Sonra') {
+    if (_selectedTimeOption == '1 Saat\nSonra') {
       calculatedTime = serverNow.add(const Duration(hours: 1));
     } else if (_selectedTimeOption == '2 Saat Sonra') {
       calculatedTime = serverNow.add(const Duration(hours: 2));

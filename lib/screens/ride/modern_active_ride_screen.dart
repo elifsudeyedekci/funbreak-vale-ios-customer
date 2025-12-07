@@ -3236,17 +3236,26 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     // Status değiştiyse (örn: accepted→in_progress) yeni rota çek
     final bool statusChanged = _lastRouteStatus != null && _lastRouteStatus != currentStatus;
     
-    // Şoför konumu önemli ölçüde değiştiyse yeni rota çek (50 metre)
-    if (statusChanged || _lastDriverLocationForRoute == null || 
+    // ✅ Son rota konumu geçersiz mi kontrol et (Sultanahmet veya 0,0 koordinatları)
+    final bool isLastRouteLocationValid = _lastDriverLocationForRoute != null &&
+        (_lastDriverLocationForRoute!.latitude != 41.0082 || _lastDriverLocationForRoute!.longitude != 28.9784) &&
+        (_lastDriverLocationForRoute!.latitude != 0 && _lastDriverLocationForRoute!.longitude != 0) &&
+        (_lastDriverLocationForRoute!.latitude > 35 && _lastDriverLocationForRoute!.latitude < 43 && 
+         _lastDriverLocationForRoute!.longitude > 25 && _lastDriverLocationForRoute!.longitude < 45);
+    
+    // Şoför konumu önemli ölçüde değiştiyse VEYA son rota konumu geçersizse yeni rota çek (50 metre)
+    if (statusChanged || !isLastRouteLocationValid || 
         _haversineDistance(
-          _lastDriverLocationForRoute!.latitude, 
-          _lastDriverLocationForRoute!.longitude,
+          _lastDriverLocationForRoute?.latitude ?? 0, 
+          _lastDriverLocationForRoute?.longitude ?? 0,
           _driverLocation!.latitude,
           _driverLocation!.longitude
         ) > 0.05) { // 50 metre
       
       if (statusChanged) {
         print('🔄 [MÜŞTERİ] Status değişti (${ _lastRouteStatus} → $currentStatus) - yeni rota çekiliyor');
+      } else if (!isLastRouteLocationValid) {
+        print('🔄 [MÜŞTERİ] Son rota konumu geçersiz/varsayılan - yeni rota çekiliyor');
       } else {
         print('🛣️ [MÜŞTERİ] Rota güncelleniyor - sürücü ${(_haversineDistance(_lastDriverLocationForRoute?.latitude ?? 0, _lastDriverLocationForRoute?.longitude ?? 0, _driverLocation!.latitude, _driverLocation!.longitude) * 1000).toStringAsFixed(0)}m hareket etti');
       }
