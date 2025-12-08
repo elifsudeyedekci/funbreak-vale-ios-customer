@@ -74,6 +74,16 @@
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Vale yolculuğunuzla ilgili önemli bildirimleri size ulaştırmak için bildirim izni gerekiyor. Şoför bulunduğunda, yolculuk başladığında ve ödemeler için bildirim alacaksınız.</string>
 	
+	<!-- 🔥 FIREBASE SWIZZLING KAPAT - embedded.mobileprovision sorunu için! -->
+	<!-- TestFlight/App Store build'lerinde mobileprovision kaldırılıyor -->
+	<!-- Bu flag ile APNs token'ı manuel yönetiyoruz -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	
+	<!-- 🔥 Firebase Messaging Auto Init - Manuel kontrol -->
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<true/>
+	
 	<!-- ⚠️ ARKA PLAN MODLARı - KONUM + BİLDİRİM + FETCH -->
 	<key>UIBackgroundModes</key>
 	<array>
