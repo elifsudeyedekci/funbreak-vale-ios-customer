@@ -737,7 +737,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
                               readOnly: _discountApplied, // 🔥 Uygulandıysa sadece oku
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _discountApplied ? Colors.grey : Colors.black,
+                                color: _discountApplied ? Colors.grey : Colors.white,
                               ),
                               decoration: InputDecoration(
                                 hintText: 'İndirim kodu',
