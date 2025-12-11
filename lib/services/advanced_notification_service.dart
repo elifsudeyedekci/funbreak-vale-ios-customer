@@ -17,6 +17,7 @@ class AdvancedNotificationService {
   static bool _initialized = false; // 🔥 Sadece 1 kez initialize
   static bool _isInitializing = false; // 🔒 Initialization Lock
   static bool _isFetchingToken = false; // 🔒 Token Fetch Lock
+  static String? _cachedFcmToken; // 💾 TOKEN CACHE - Rate Limit'e Son!
   static StreamSubscription<RemoteMessage>? _foregroundSubscription; // 🔥 Listener kontrolü
   
   // MÜŞTERİ BİLDİRİM TÜRLERİ
@@ -319,6 +320,14 @@ class AdvancedNotificationService {
   
   // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
   static Future<void> _getFcmTokenDirect() async {
+    // 1. CACHE KONTROLÜ - Hız ve Güvenlik!
+    if (_cachedFcmToken != null) {
+      print('💾 FCM Token cache\'den kullanılıyor (Rate Limit Koruması)');
+      // Token zaten var, sunucuyu güncelle ve çık (Firebase'e gitme!)
+      await _updateTokenOnServer(_cachedFcmToken!);
+      return;
+    }
+
     if (_isFetchingToken) {
       print('⏳ FCM token zaten alınıyor - işlem iptal edildi (Concurrency Protection)');
       return;
@@ -363,6 +372,10 @@ class AdvancedNotificationService {
       
       if (token != null) {
         print('✅ FCM Token alındı: ${token.substring(0, 30)}...');
+        
+        // 💾 TOKEN'I CACHE'E KAYDET
+        _cachedFcmToken = token;
+        
         await prefs.remove('fcm_token_fail_time');
         await prefs.setInt('fcm_token_fail_count', 0);
         await _updateTokenOnServer(token);
@@ -395,6 +408,9 @@ class AdvancedNotificationService {
   static Future<void> _resetFcmToken() async {
     try {
       print('🔄 FCM Token siliniyor (rate limit reset)...');
+      
+      // Cache'i temizle
+      _cachedFcmToken = null;
       
       // FCM token'ı sil - Bu Firebase'e yeni installation oluşturmasını söyler
       await _messaging!.deleteToken();
