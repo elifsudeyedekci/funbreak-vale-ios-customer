@@ -157,17 +157,28 @@ void main() async {
   runApp(const MyApp());
 }
 
+// FCM Token alma için GLOBAL KİLİT!
+bool _isFcmInitRunning = false;
+bool _isFcmInitCompleted = false;
+
 Future<void> _initializeFirebaseMessaging() async {
+  if (_isFcmInitRunning || _isFcmInitCompleted) {
+    print('⚠️ FCM setup zaten çalışıyor veya tamamlandı - atlanıyor');
+    return;
+  }
+  
+  _isFcmInitRunning = true;
+  
   // ✅ TÜM FCM İŞLEMLERİ AdvancedNotificationService TARAFINDAN YAPILIYOR!
   // ⚠️ BURADA requestPermission() ÇAĞIRMIYORUZ - "Too many server requests" hatasını önlemek için!
   // AdvancedNotificationService.initialize() zaten _requestPermissions() çağırıyor.
   
-  print('✅ FCM setup - AdvancedNotificationService tüm işlemleri yönetiyor');
+  print('✅ MÜŞTERİ FCM setup - AdvancedNotificationService tüm işlemleri yönetiyor');
   print('   📱 Permission: AdvancedNotificationService._requestPermissions()');
   print('   🔑 Token: AdvancedNotificationService._getFcmTokenDirect()');
   
-  // NOT: Eski kod "Too many server requests" hatasına neden oluyordu
-  // requestPermission() iki kez çağrılıyordu: main.dart + AdvancedNotificationService
+  _isFcmInitCompleted = true; // 🔥 Tamamlandı!
+  _isFcmInitRunning = false; // Kilidi aç (ama completed true kaldığı için tekrar giremez)
 }
 
 // MÜŞTERİ FCM TOKEN KAYDETME - ŞOFÖR GİBİ ÇALIŞIYOR!
