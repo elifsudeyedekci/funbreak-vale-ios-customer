@@ -138,7 +138,7 @@ class AdvancedNotificationService {
       
       // Foreground message handler - SADECE BİR KERE!
       _foregroundSubscription = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-      print('✅ Foreground listener kayıtlı - ID: ${_foregroundSubscription.hashCode}');
+      print('✅ MÜŞTERİ Foreground listener kayıtlı - ID: ${ _foregroundSubscription.hashCode}');
       
       // App açılışında notification handler
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
@@ -151,11 +151,11 @@ class AdvancedNotificationService {
       
       _initialized = true; // 🔥 BAŞARILDI OLARAK İŞARETLE!
       print('✅ Gelişmiş bildirim servisi hazır!');
-      
+
     } catch (e) {
       print('❌ Bildirim servisi başlatma hatası: $e');
     } finally {
-      _isInitializing = false; // 🔓 KİLİDİ AÇ (Hata olsa bile)
+      _isInitializing = false; // 🔓 KİLİDİ AÇ
     }
   }
   
