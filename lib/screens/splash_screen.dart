@@ -32,8 +32,9 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (!mounted) return;
     
-    // İzinleri iste ve servisleri başlat
-    await _requestPermissionsAndInitializeServices();
+    // ⚠️ İzinler ve Servisler main.dart'ta başlatılıyor!
+    // Burada sadece auth kontrolü yapıyoruz.
+    // await _requestPermissionsAndInitializeServices(); // 🔥 KALDIRILDI
     
     final authProvider = context.read<AuthProvider>();
     final isLoggedIn = await authProvider.checkAuthStatus();

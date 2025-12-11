@@ -312,6 +312,8 @@ class AdvancedNotificationService {
       }
       
       // FCM token al (APNs hazır veya timeout)
+      // await _getFcmTokenDirect(); // 🔥 İPTAL! requestPermission() zaten bunu çağırıyor (Android/iOS ayrımı yukarıda)
+      // Token alma işlemi initialize() -> _requestPermissions() -> _getFcmTokenDirect() zinciri ile tek bir yerden yapılır.
       await _getFcmTokenDirect();
     } catch (e) {
       print('❌ APNs wait hatası: $e');
