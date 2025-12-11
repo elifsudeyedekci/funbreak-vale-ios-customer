@@ -261,9 +261,8 @@ class AdvancedNotificationService {
           sound: true,
         );
         
-        // 🔄 iOS - PROXY ENABLED OLDUĞU İÇİN DİREKT FCM TOKEN İSTE!
-        // _waitForApnsAndGetFcmToken(); <-- KALDIRILDI
-        _getFcmTokenDirect();
+        // 🔄 iOS - APNs TOKEN BEKLE (Proxy olsa bile timing sorunu olabilir!)
+        await _waitForApnsAndGetFcmToken();
       } else {
         // Android için direkt FCM token al
         _getFcmTokenDirect();
@@ -273,8 +272,39 @@ class AdvancedNotificationService {
     }
   }
   
-  // ❌ _waitForApnsAndGetFcmToken Fonksiyonu ARTIK KULLANILMIYOR (Proxy Enabled)
-  // Eski kod temizlendi.
+  // ✅ iOS için APNs bekle ve FCM token al
+  static Future<void> _waitForApnsAndGetFcmToken() async {
+    try {
+      if (!Platform.isIOS) return;
+
+      // APNs token'ı al - Proxy enabled olsa bile bazen geç gelir
+      String? apnsToken;
+      
+      print('📱 iOS APNs token bekleniyor (Wait Loop)...');
+      
+      // 20 deneme (toplam 20 saniye)
+      for (int i = 0; i < 20; i++) {
+        apnsToken = await _messaging!.getAPNSToken();
+        if (apnsToken != null) {
+          print('✅ APNs token hazır (${i+1}. deneme): ${apnsToken.substring(0, 10)}...');
+          break;
+        }
+        
+        if (i % 5 == 0) print('   ⏳ APNs bekleniyor... ${i+1}/20');
+        await Future.delayed(Duration(seconds: 1));
+      }
+      
+      if (apnsToken == null) {
+        print('⚠️ APNs token 20 saniye içinde alınamadı!');
+        print('   Devam ediliyor ama FCM hatası alınabilir...');
+      }
+      
+      // FCM token al (APNs hazır veya timeout)
+      await _getFcmTokenDirect();
+    } catch (e) {
+      print('❌ APNs wait hatası: $e');
+    }
+  }
   
   // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
   static Future<void> _getFcmTokenDirect() async {
@@ -325,12 +355,18 @@ class AdvancedNotificationService {
       }
     } catch (e) {
       print('❌ FCM token alma hatası: $e');
-      if (e.toString().contains('Too many') || e.toString().contains('unknown')) {
+      
+      // 🔥 Too many server requests -> 1 saatlik bloklama yerine kısa süreli backoff
+      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
         final prefs = await SharedPreferences.getInstance();
         final failCount = prefs.getInt('fcm_token_fail_count') ?? 0;
+        
+        // Hata zamanını kaydet
         await prefs.setString('fcm_token_fail_time', DateTime.now().toIso8601String());
         await prefs.setInt('fcm_token_fail_count', failCount + 1);
-        print('⏳ Rate limit algılandı - deneme: ${failCount + 1}');
+        
+        print('🛑 FCM Rate Limit Hatası! (Deneme: ${failCount + 1})');
+        print('   ⏳ 30 saniye sonra tekrar denenebilir.');
       }
     }
   }
