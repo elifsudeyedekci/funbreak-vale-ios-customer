@@ -15,6 +15,8 @@ class AdvancedNotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   static FirebaseMessaging? _messaging;
   static bool _initialized = false; // 🔥 Sadece 1 kez initialize
+  static bool _isInitializing = false; // 🔒 Initialization Lock
+  static bool _isFetchingToken = false; // 🔒 Token Fetch Lock
   static StreamSubscription<RemoteMessage>? _foregroundSubscription; // 🔥 Listener kontrolü
   
   // MÜŞTERİ BİLDİRİM TÜRLERİ
@@ -78,11 +80,18 @@ class AdvancedNotificationService {
   
   // SERVİS BAŞLATMA - PLATFORM-SPECIFIC!
   static Future<void> initialize() async {
-    // 🔥 ZATEN BAŞLATILDIYSA ATLA!
+    // 🔥 ZATEN BAŞLATILDIYSA VEYA BAŞLATILIYORSA ATLA!
     if (_initialized) {
       print('⏭️ Bildirim servisi zaten başlatıldı - atlanıyor');
       return;
     }
+    
+    if (_isInitializing) {
+      print('⏳ Bildirim servisi şu an başlatılıyor - bekleniyor...');
+      return;
+    }
+    
+    _isInitializing = true; // 🔒 KİLİTLE
     
     try {
       print('🔔 Gelişmiş bildirim servisi başlatılıyor... (${Platform.operatingSystem})');
@@ -145,6 +154,8 @@ class AdvancedNotificationService {
       
     } catch (e) {
       print('❌ Bildirim servisi başlatma hatası: $e');
+    } finally {
+      _isInitializing = false; // 🔓 KİLİDİ AÇ (Hata olsa bile)
     }
   }
   
@@ -308,6 +319,13 @@ class AdvancedNotificationService {
   
   // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
   static Future<void> _getFcmTokenDirect() async {
+    if (_isFetchingToken) {
+      print('⏳ FCM token zaten alınıyor - işlem iptal edildi (Concurrency Protection)');
+      return;
+    }
+
+    _isFetchingToken = true; // 🔒 TOKEN LOCK
+
     try {
       // 🔥 RATE LIMIT KORUMASI
       final prefs = await SharedPreferences.getInstance();
@@ -368,6 +386,8 @@ class AdvancedNotificationService {
         print('🛑 FCM Rate Limit Hatası! (Deneme: ${failCount + 1})');
         print('   ⏳ 30 saniye sonra tekrar denenebilir.');
       }
+    } finally {
+      _isFetchingToken = false; // 🔓 TOKEN LOCK AÇ
     }
   }
   
