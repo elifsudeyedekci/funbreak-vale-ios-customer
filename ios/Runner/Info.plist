@@ -78,7 +78,7 @@
 	<!-- TestFlight/App Store build'lerinde mobileprovision kaldırılıyor -->
 	<!-- Bu flag ile APNs token'ı manuel yönetiyoruz -->
 	<key>FirebaseAppDelegateProxyEnabled</key>
-	<false/>
+	<true/>
 	
 	<!-- 🔥 Firebase Messaging Auto Init - Manuel kontrol -->
 	<key>FirebaseMessagingAutoInitEnabled</key>

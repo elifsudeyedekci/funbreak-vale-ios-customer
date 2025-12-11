@@ -1442,7 +1442,14 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
     }
   }
   
+  // POLLING RACE CONDITION FIX
+  bool _isUpdating = false;
+
   Future<void> _updateRideStatus() async {
+    // ✅ RACE CONDITION ÖNLEME
+    if (_isUpdating) return;
+    _isUpdating = true;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final customerId = prefs.getString('user_id') ?? '0';
@@ -1742,9 +1749,9 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
       
       // Eğer timeout ise yolculuk bitmiş olabilir - ZORLA ÇIKIŞ
       if (e.toString().contains('TimeoutException') || e.toString().contains('Null check')) {
+        // ... (ZORLA ÇIKIŞ KODLARI MEVCUT)
         print('⏱️ [MÜŞTERİ] API hatası (timeout/null) - ZORLA ana sayfaya dönüş');
-        
-        try {
+         try {
           // RideProvider'dan temizle
           if (mounted) {
             final rideProvider = Provider.of<RideProvider>(context, listen: false);
@@ -1766,6 +1773,9 @@ Kabul Tarihi: ${DateTime.now().toString().split(' ')[0]}
           });
         }
       }
+    } finally {
+      // ✅ İŞLEM BİTTİ - BAYRAĞI İNDİR
+      _isUpdating = false;
     }
   }
   

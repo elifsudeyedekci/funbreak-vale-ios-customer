@@ -261,8 +261,9 @@ class AdvancedNotificationService {
           sound: true,
         );
         
-        // 🔄 iOS APNs TOKEN - ARKA PLANDA BEKLE (UI BLOKE ETME!)
-        _waitForApnsAndGetFcmToken();
+        // 🔄 iOS - PROXY ENABLED OLDUĞU İÇİN DİREKT FCM TOKEN İSTE!
+        // _waitForApnsAndGetFcmToken(); <-- KALDIRILDI
+        _getFcmTokenDirect();
       } else {
         // Android için direkt FCM token al
         _getFcmTokenDirect();
@@ -272,35 +273,8 @@ class AdvancedNotificationService {
     }
   }
   
-  // ✅ iOS için APNs bekle ve FCM token al
-  static Future<void> _waitForApnsAndGetFcmToken() async {
-    try {
-      // APNs token'ı al - Runner.entitlements ile artık çalışmalı
-      String? apnsToken;
-      
-      // 🔥 10 deneme yap (toplam 10 saniye) - iOS APNs bazen yavaş!
-      print('📱 iOS APNs token bekleniyor (max 10 saniye)...');
-      for (int i = 0; i < 10; i++) {
-        apnsToken = await _messaging!.getAPNSToken();
-        if (apnsToken != null) {
-          print('✅ APNs token alındı (${i+1}. deneme): ${apnsToken.substring(0, 20)}...');
-          break;
-        }
-        print('   ⏳ APNs token henüz yok - deneme ${i+1}/10');
-        await Future.delayed(Duration(seconds: 1));
-      }
-      
-      if (apnsToken == null) {
-        print('⚠️ APNs token alınamadı 10 saniye içinde!');
-        print('   🔍 Kontrol et: Runner.entitlements, Provisioning Profile, Firebase Console APNs Key');
-      }
-      
-      // FCM token al
-      await _getFcmTokenDirect();
-    } catch (e) {
-      print('❌ APNs/FCM hatası: $e');
-    }
-  }
+  // ❌ _waitForApnsAndGetFcmToken Fonksiyonu ARTIK KULLANILMIYOR (Proxy Enabled)
+  // Eski kod temizlendi.
   
   // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
   static Future<void> _getFcmTokenDirect() async {

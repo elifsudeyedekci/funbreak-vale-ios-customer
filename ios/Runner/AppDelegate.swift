@@ -27,8 +27,8 @@ import UserNotifications  // ⚠️ UserNotifications import!
     // ⚠️ Push notification setup (iOS 10+)
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
-      Messaging.messaging().delegate = self as MessagingDelegate
-      print("✅ UNUserNotificationCenter delegate + Firebase Messaging delegate set")
+      // Messaging.messaging().delegate = self  <-- PROXY ENABLED OLDUĞU İÇİN GEREKSİZ!
+      print("✅ UNUserNotificationCenter delegate set")
     }
     
     // ⚠️ Push notification izni iste!
@@ -48,30 +48,21 @@ import UserNotifications  // ⚠️ UserNotifications import!
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
   
-  // ⚠️ APNs Device Token Registration - PRODUCTION TYPE!
+  // ⚠️ APNs Device Token Registration
+  // 🔥 PROXY ENABLED: Firebase Swizzling token'ı otomatik alacak!
+  // Manuel setAPNSToken kodu KALDIRILDI.
   override func application(_ application: UIApplication, 
                             didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+    // Proxy (Swizzling) açık olduğu için super çağrısı yeterli olabilir,
+    // ancak metodun override edilmesi swizzling'i bozmaz.
+    // Sadece setAPNSToken ÇAĞIRMIYORUZ.
     
-    // 🔥 KRİTİK: APNs token'ı PRODUCTION type ile kaydet!
-    // Bu embedded.mobileprovision dosyası olmadan da çalışmasını sağlar!
-    // TestFlight/App Store build'lerinde mobileprovision kaldırılıyor
-    #if DEBUG
-    Messaging.messaging().setAPNSToken(deviceToken, type: .sandbox)
-    print("📱 APNs Token SANDBOX olarak kaydedildi (DEBUG)")
-    #else
-    Messaging.messaging().setAPNSToken(deviceToken, type: .prod)
-    print("📱 APNs Token PRODUCTION olarak kaydedildi (RELEASE)")
-    #endif
-    
-    let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+    let tokenParts = deviceToken.map { data in String(format: "%%02.2hhx", data) }
     let token = tokenParts.joined()
     print("📱 MÜŞTERİ APNs Device Token registered: \(token.prefix(20))...")
-    #if DEBUG
-    print("✅ APNs token Firebase'e kaydedildi - Type: SANDBOX")
-    #else
-    print("✅ APNs token Firebase'e kaydedildi - Type: PRODUCTION")
-    #endif
+    
+    // Firebase Proxy (Swizzling) bu token'ı otomatik yakalayıp FCM ile eşleştirecek.
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
   
   // ⚠️ APNs Registration Failure
