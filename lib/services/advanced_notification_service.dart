@@ -6,6 +6,7 @@ import 'dart:typed_data'; // 🔥 Int64List için!
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart'; // 🔥 RATE LIMIT RESET İÇİN!
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart'; // 🔥 MethodChannel için!
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -252,9 +253,30 @@ class AdvancedNotificationService {
       }
       
       if (token == null || token.isEmpty) {
-        print('❌ [FCM] 5 denemede de token alınamadı');
-        _fcmTokenRequested = false;
-        return false;
+        print('❌ [FCM] 5 denemede de token alınamadı - NATIVE FALLBACK deneniyor...');
+        
+        // 🔥 GPT DEBUG: Native MethodChannel ile dene!
+        if (Platform.isIOS) {
+          try {
+            const nativeFcm = MethodChannel('debug_fcm');
+            final nativeToken = await nativeFcm.invokeMethod<String>('getNativeFcmToken');
+            print('🔥 [NATIVE FALLBACK] Sonuç: $nativeToken');
+            
+            if (nativeToken != null && nativeToken.isNotEmpty) {
+              token = nativeToken;
+              print('✅ [NATIVE FALLBACK] Token alındı!');
+            }
+          } catch (nativeError) {
+            print('❌ [NATIVE FALLBACK] HATA: $nativeError');
+            // Bu hata gerçek iOS hatasını gösterecek!
+          }
+        }
+        
+        if (token == null || token.isEmpty) {
+          print('❌ [FCM] Tüm yöntemler başarısız');
+          _fcmTokenRequested = false;
+          return false;
+        }
       }
       
       print('✅ [FCM] Token alındı: ${token.substring(0, 30)}...');
