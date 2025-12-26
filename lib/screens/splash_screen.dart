@@ -144,11 +144,9 @@ class _SplashScreenState extends State<SplashScreen> {
   
   Future<void> _requestPermissionsAndInitializeServices() async {
     try {
-      // Bildirim izni kontrol et
-      var notificationStatus = await Permission.notification.status;
-      if (notificationStatus.isDenied) {
-        await _requestPermissionWithDialog('Bildirim', Permission.notification);
-      }
+      // 🔥 BİLDİRİM İZNİ BURADA İSTENMİYOR!
+      // AdvancedNotificationService.registerFcmToken() içinde isteniyor (login sonrası)
+      // Bu sayede izin 2 kere istenmez
       
       // Konum izni kontrol et
       var locationStatus = await Permission.location.status;

@@ -10,15 +10,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // GELİŞMİŞ BİLDİRİM SERVİSİ - MÜŞTERİ UYGULAMASI!
+// 🔥 V2.0 - RATE LIMIT SORUNU ÇÖZÜLDÜ!
 class AdvancedNotificationService {
   static const String baseUrl = 'https://admin.funbreakvale.com/api';
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   static FirebaseMessaging? _messaging;
-  static bool _initialized = false; // 🔥 Sadece 1 kez initialize
-  static bool _isInitializing = false; // 🔒 Initialization Lock
-  static bool _isFetchingToken = false; // 🔒 Token Fetch Lock
-  static String? _cachedFcmToken; // 💾 TOKEN CACHE - Rate Limit'e Son!
-  static StreamSubscription<RemoteMessage>? _foregroundSubscription; // 🔥 Listener kontrolü
+  static bool _initialized = false;
+  static bool _isInitializing = false;
+  static String? _cachedFcmToken;
+  static StreamSubscription<RemoteMessage>? _foregroundSubscription;
+  
+  // 🔥 YENİ: FCM token sadece 1 kez alınsın
+  static bool _fcmTokenRequested = false;
+  static bool _fcmTokenSentToServer = false;
   
   // MÜŞTERİ BİLDİRİM TÜRLERİ
   static const Map<String, NotificationConfig> _customerNotifications = {
@@ -76,12 +80,11 @@ class AdvancedNotificationService {
       priority: 'normal',
       sound: 'default',
     ),
-    // new_campaign kaldırıldı - zaten mevcut kampanya sistemi çalışıyor!
   };
   
-  // SERVİS BAŞLATMA - PLATFORM-SPECIFIC!
+  // 🔥 SERVİS BAŞLATMA - FCM TOKEN ALMADAN!
+  // FCM token sadece registerFcmToken() ile alınacak (login sonrası)
   static Future<void> initialize() async {
-    // 🔥 ZATEN BAŞLATILDIYSA VEYA BAŞLATILIYORSA ATLA!
     if (_initialized) {
       print('⏭️ Bildirim servisi zaten başlatıldı - atlanıyor');
       return;
@@ -92,16 +95,15 @@ class AdvancedNotificationService {
       return;
     }
     
-    _isInitializing = true; // 🔒 KİLİTLE
+    _isInitializing = true;
     
     try {
-      print('🔔 Gelişmiş bildirim servisi başlatılıyor... (${Platform.operatingSystem})');
+      print('🔔 Bildirim servisi başlatılıyor (V2.0 - Rate Limit Fix)...');
       
-      // ⚠️ PLATFORM-SPECIFIC INITIALIZATION
+      // Platform-specific initialization
       if (Platform.isIOS) {
-        // iOS initialization (iOS 10+)
         const iosSettings = DarwinInitializationSettings(
-          requestAlertPermission: true,
+          requestAlertPermission: false, // 🔥 İZİN İSTEME - Login sonrası yapılacak!
           requestBadgePermission: true,
           requestSoundPermission: true,
         );
@@ -110,63 +112,191 @@ class AdvancedNotificationService {
           const InitializationSettings(iOS: iosSettings),
           onDidReceiveNotificationResponse: _onNotificationTapped,
         );
-        print('✅ iOS bildirim sistemi başlatıldı');
+        print('✅ iOS bildirim sistemi başlatıldı (izin sonra istenecek)');
         
       } else {
-        // Android initialization
         const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
         await _localNotifications.initialize(
           const InitializationSettings(android: androidSettings),
           onDidReceiveNotificationResponse: _onNotificationTapped,
         );
-        
-        // Android notification channels oluştur
         await _createNotificationChannels();
         print('✅ Android bildirim sistemi başlatıldı');
       }
       
-      // Firebase Messaging setup (HER İKİ PLATFORM)
+      // Firebase Messaging referansı al (token ALMADAN!)
       _messaging = FirebaseMessaging.instance;
-      await _messaging!.setAutoInitEnabled(true);
-      
-      // Permission iste
-      await _requestPermissions();
-      
-      // Background handler main.dart'ta kayıtlı
       
       // 🔥 ESKİ LISTENER'I İPTAL ET!
       await _foregroundSubscription?.cancel();
       
-      // Foreground message handler - SADECE BİR KERE!
+      // Foreground message handler
       _foregroundSubscription = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-      print('✅ MÜŞTERİ Foreground listener kayıtlı - ID: ${ _foregroundSubscription.hashCode}');
+      print('✅ Foreground listener kayıtlı');
       
       // App açılışında notification handler
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
       
-      // Token güncelleme
+      // Token güncelleme listener (sadece dinle, istek yapma)
       FirebaseMessaging.instance.onTokenRefresh.listen(_onTokenRefresh);
       
-      // Topic'lere subscribe
-      await _subscribeToTopics();
-      
-      _initialized = true; // 🔥 BAŞARILDI OLARAK İŞARETLE!
-      print('✅ Gelişmiş bildirim servisi hazır!');
+      _initialized = true;
+      print('✅ Bildirim servisi hazır! (FCM token login sonrası alınacak)');
 
     } catch (e) {
       print('❌ Bildirim servisi başlatma hatası: $e');
     } finally {
-      _isInitializing = false; // 🔓 KİLİDİ AÇ
+      _isInitializing = false;
     }
   }
   
-  // ANDROID BİLDİRİM KANALLARI - HEADS-UP İÇİN DÜZELTME!
-  static Future<void> _createNotificationChannels() async {
-    // ⚠️ iOS'te channel sistemi yok, sadece Android!
-    if (Platform.isIOS) {
-      print('⏭️ iOS - Channel sistemi yok, atlanıyor');
-      return;
+  // 🔥 YENİ: FCM TOKEN KAYDETME - SADECE LOGIN SONRASI ÇAĞRILMALI!
+  // Bu fonksiyon auth_provider.dart'tan login başarılı olduktan sonra çağrılacak
+  static Future<bool> registerFcmToken(int userId, {String userType = 'customer'}) async {
+    print('🔔 [FCM] registerFcmToken çağrıldı - User: $userId, Type: $userType');
+    
+    // Zaten backend'e gönderildiyse tekrar gönderme
+    if (_fcmTokenSentToServer && _cachedFcmToken != null) {
+      print('✅ [FCM] Token zaten backend\'e gönderildi - atlanıyor');
+      return true;
     }
+    
+    // Zaten istek yapılıyorsa bekle
+    if (_fcmTokenRequested) {
+      print('⏳ [FCM] Token zaten isteniyor - bekleniyor...');
+      // 5 saniye bekle ve cache'i kontrol et
+      await Future.delayed(const Duration(seconds: 5));
+      return _cachedFcmToken != null;
+    }
+    
+    _fcmTokenRequested = true;
+    
+    try {
+      // 1. Önce izin iste
+      print('📱 [FCM] Bildirim izni isteniyor...');
+      final settings = await _messaging!.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
+      print('📱 [FCM] İzin durumu: ${settings.authorizationStatus}');
+      
+      if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        print('❌ [FCM] Bildirim izni reddedildi');
+        _fcmTokenRequested = false;
+        return false;
+      }
+      
+      // 2. iOS için foreground presentation ayarla
+      if (Platform.isIOS) {
+        await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+      
+      // 3. iOS'ta APNs token bekle (max 10 saniye)
+      if (Platform.isIOS) {
+        print('📱 [FCM] iOS - APNs token bekleniyor...');
+        String? apnsToken;
+        for (int i = 0; i < 10; i++) {
+          apnsToken = await _messaging!.getAPNSToken();
+          if (apnsToken != null) {
+            print('✅ [FCM] APNs token alındı (${i+1}. deneme)');
+            break;
+          }
+          await Future.delayed(const Duration(seconds: 1));
+        }
+        
+        if (apnsToken == null) {
+          print('⚠️ [FCM] APNs token 10 saniyede alınamadı');
+          // Devam et, FCM token deneyelim
+        }
+      }
+      
+      // 4. FCM Token al (TEK DENEME!)
+      print('🔑 [FCM] Token alınıyor (tek deneme)...');
+      final token = await _messaging!.getToken().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⏱️ [FCM] Token alma timeout (10s)');
+          return null;
+        },
+      );
+      
+      if (token == null) {
+        print('❌ [FCM] Token alınamadı');
+        _fcmTokenRequested = false;
+        return false;
+      }
+      
+      print('✅ [FCM] Token alındı: ${token.substring(0, 30)}...');
+      _cachedFcmToken = token;
+      
+      // 5. Backend'e gönder
+      print('📡 [FCM] Token backend\'e gönderiliyor...');
+      final response = await http.post(
+        Uri.parse('$baseUrl/update_fcm_token.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'user_type': userType,
+          'fcm_token': token,
+        }),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ [FCM] Token backend\'e kaydedildi!');
+          _fcmTokenSentToServer = true;
+          
+          // Topic'lere subscribe
+          await _subscribeToTopics();
+          
+          return true;
+        } else {
+          print('❌ [FCM] Backend hatası: ${data['message']}');
+        }
+      } else {
+        print('❌ [FCM] HTTP hatası: ${response.statusCode}');
+      }
+      
+      return false;
+      
+    } catch (e) {
+      print('❌ [FCM] registerFcmToken hatası: $e');
+      
+      // Rate limit hatası varsa kaydet
+      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
+        print('🛑 [FCM] RATE LIMIT! 5 dakika bekleyin.');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fcm_rate_limit_time', DateTime.now().toIso8601String());
+      }
+      
+      return false;
+    } finally {
+      _fcmTokenRequested = false;
+    }
+  }
+  
+  // 🔥 Cache'li token'ı al (varsa)
+  static String? getCachedToken() => _cachedFcmToken;
+  
+  // 🔥 Token durumunu sıfırla (logout için)
+  static void resetTokenState() {
+    _cachedFcmToken = null;
+    _fcmTokenRequested = false;
+    _fcmTokenSentToServer = false;
+    print('🔄 [FCM] Token durumu sıfırlandı');
+  }
+  
+  // ANDROID BİLDİRİM KANALLARI
+  static Future<void> _createNotificationChannels() async {
+    if (Platform.isIOS) return;
     
     print('🔔 [MÜŞTERİ] ANDROID CHANNEL OLUŞTURMA BAŞLADI!');
     final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -177,7 +307,6 @@ class AdvancedNotificationService {
     }
     
     print('🗑️ [MÜŞTERİ] Eski channellar siliniyor...');
-    // Önce eski kanalları sil
     await androidPlugin.deleteNotificationChannel('funbreak_rides');
     await androidPlugin.deleteNotificationChannel('ride_updates');
     await androidPlugin.deleteNotificationChannel('location_updates');
@@ -209,7 +338,7 @@ class AdvancedNotificationService {
         showBadge: true,
       ),
       AndroidNotificationChannel(
-        'location_updates_v3',  // 🔥 V3 - SES CACHE FIX!
+        'location_updates_v3',
         'Konum Güncellemeleri',
         description: 'Vale konum ve mesafe bildirimleri',
         importance: Importance.max,
@@ -240,608 +369,170 @@ class AdvancedNotificationService {
       print('  ✅ Channel: ${channel.id} (Importance: ${channel.importance})');
     }
     
-    print('✅ [MÜŞTERİ] ${channels.length} bildirim kanalı OLUŞTURULDU (IMPORTANCE MAX!)');
+    print('✅ [MÜŞTERİ] ${channels.length} bildirim kanalı OLUŞTURULDU');
   }
   
-  // İZİN İSTEME VE TOKEN ALMA - iOS KRİTİK!
-  static Future<void> _requestPermissions() async {
-    try {
-      // ✅ ÖNCE İZİN İSTE (iOS için zorunlu)
-      final settings = await _messaging!.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-      
-      print('🔔 Bildirim izni durumu: ${settings.authorizationStatus}');
-      
-      // iOS için authorizationStatus kontrol
-      if (Platform.isIOS) {
-        if (settings.authorizationStatus != AuthorizationStatus.authorized &&
-            settings.authorizationStatus != AuthorizationStatus.provisional) {
-          print('❌ iOS bildirim izni verilmedi: ${settings.authorizationStatus}');
-          return;
-        }
-
-        await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        
-        // 🔄 iOS - APNs TOKEN BEKLE (Proxy olsa bile timing sorunu olabilir!)
-        await _waitForApnsAndGetFcmToken();
-      } else {
-        // Android için direkt FCM token al
-        _getFcmTokenDirect();
-      }
-    } catch (e) {
-      print('❌ İzin isteme hatası: $e');
-    }
-  }
-  
-  // ✅ iOS için APNs bekle ve FCM token al
-  static Future<void> _waitForApnsAndGetFcmToken() async {
-    try {
-      if (!Platform.isIOS) return;
-
-      // APNs token'ı al - Proxy enabled olsa bile bazen geç gelir
-      String? apnsToken;
-      
-      print('📱 iOS APNs token bekleniyor (Wait Loop)...');
-      
-      // 20 deneme (toplam 20 saniye)
-      for (int i = 0; i < 20; i++) {
-        apnsToken = await _messaging!.getAPNSToken();
-        if (apnsToken != null) {
-          print('✅ APNs token hazır (${i+1}. deneme): ${apnsToken.substring(0, 10)}...');
-          break;
-        }
-        
-        if (i % 5 == 0) print('   ⏳ APNs bekleniyor... ${i+1}/20');
-        await Future.delayed(Duration(seconds: 1));
-      }
-      
-      if (apnsToken == null) {
-        print('⚠️ APNs token 20 saniye içinde alınamadı!');
-        print('   Devam ediliyor ama FCM hatası alınabilir...');
-      }
-      
-      // FCM token al (APNs hazır veya timeout)
-      // await _getFcmTokenDirect(); // 🔥 İPTAL! requestPermission() zaten bunu çağırıyor (Android/iOS ayrımı yukarıda)
-      // Token alma işlemi initialize() -> _requestPermissions() -> _getFcmTokenDirect() zinciri ile tek bir yerden yapılır.
-      await _getFcmTokenDirect();
-    } catch (e) {
-      print('❌ APNs wait hatası: $e');
-    }
-  }
-  
-  // ✅ FCM Token al (Android ve iOS ortak) - RATE LIMIT KORUMALI!
-  static Future<void> _getFcmTokenDirect() async {
-    // 1. CACHE KONTROLÜ - Hız ve Güvenlik!
-    if (_cachedFcmToken != null) {
-      print('💾 FCM Token cache\'den kullanılıyor (Rate Limit Koruması)');
-      // Token zaten var, sunucuyu güncelle ve çık (Firebase'e gitme!)
-      await _updateTokenOnServer(_cachedFcmToken!);
-      return;
-    }
-
-    if (_isFetchingToken) {
-      print('⏳ FCM token zaten alınıyor - işlem iptal edildi (Concurrency Protection)');
-      return;
-    }
-
-    _isFetchingToken = true; // 🔒 TOKEN LOCK
-
-    try {
-      // 🔥 RATE LIMIT KORUMASI
-      final prefs = await SharedPreferences.getInstance();
-      final lastFailTime = prefs.getString('fcm_token_fail_time');
-      final failCount = prefs.getInt('fcm_token_fail_count') ?? 0;
-      
-      if (lastFailTime != null) {
-        final failTime = DateTime.tryParse(lastFailTime);
-        if (failTime != null) {
-          final diff = DateTime.now().difference(failTime);
-          
-          // 3+ başarısız deneme → OTOMATİK TOKEN RESET!
-          if (failCount >= 3) {
-            print('🔄 FCM Rate limit reset başlatılıyor (failCount: $failCount)...');
-            await _resetFcmToken();
-            await prefs.remove('fcm_token_fail_time');
-            await prefs.setInt('fcm_token_fail_count', 0);
-            return; // Reset sonrası yeni token otomatik alınacak
-          }
-          
-          if (diff.inSeconds < 30) {
-            print('⏳ FCM Rate limit koruması: ${30 - diff.inSeconds} saniye bekle (deneme: $failCount)');
-            return;
-          }
-        }
-      }
-      
-      final token = await _messaging!.getToken().timeout(
-        Duration(seconds: 5),
-        onTimeout: () {
-          print('⏱️ FCM token alma timeout!');
-          return null;
-        },
-      );
-      
-      if (token != null) {
-        print('✅ FCM Token alındı: ${token.substring(0, 30)}...');
-        
-        // 💾 TOKEN'I CACHE'E KAYDET
-        _cachedFcmToken = token;
-        
-        await prefs.remove('fcm_token_fail_time');
-        await prefs.setInt('fcm_token_fail_count', 0);
-        await _updateTokenOnServer(token);
-      } else {
-        print('⚠️ FCM token null döndü');
-        await prefs.setString('fcm_token_fail_time', DateTime.now().toIso8601String());
-        await prefs.setInt('fcm_token_fail_count', failCount + 1);
-      }
-    } catch (e) {
-      print('❌ FCM token alma hatası: $e');
-      
-      // 🔥 Too many server requests -> 1 saatlik bloklama yerine kısa süreli backoff
-      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
-        final prefs = await SharedPreferences.getInstance();
-        final failCount = prefs.getInt('fcm_token_fail_count') ?? 0;
-        
-        // Hata zamanını kaydet
-        await prefs.setString('fcm_token_fail_time', DateTime.now().toIso8601String());
-        await prefs.setInt('fcm_token_fail_count', failCount + 1);
-        
-        print('🛑 FCM Rate Limit Hatası! (Deneme: ${failCount + 1})');
-        print('   ⏳ 30 saniye sonra tekrar denenebilir.');
-      }
-    } finally {
-      _isFetchingToken = false; // 🔓 TOKEN LOCK AÇ
-    }
-  }
-  
-  // 🔥 FCM TOKEN RESET - RATE LIMIT'İ ANINDA SIFIRLAR!
-  static Future<void> _resetFcmToken() async {
-    try {
-      print('🔄 FCM Token siliniyor (rate limit reset)...');
-      
-      // Cache'i temizle
-      _cachedFcmToken = null;
-      
-      // FCM token'ı sil - Bu Firebase'e yeni installation oluşturmasını söyler
-      await _messaging!.deleteToken();
-      print('✅ FCM Token silindi');
-      
-      // 2 saniye bekle (Firebase'in yeni token oluşturması için)
-      await Future.delayed(Duration(seconds: 2));
-      
-      // Yeni token al
-      final newToken = await _messaging!.getToken();
-      if (newToken != null) {
-        print('✅ Yeni FCM Token alındı: ${newToken.substring(0, 30)}...');
-        await _updateTokenOnServer(newToken);
-      }
-      
-      print('✅ FCM Rate limit reset tamamlandı!');
-    } catch (e) {
-      print('❌ FCM Token reset hatası: $e');
-    }
-  }
-  
-  // 🔧 MANUEL RATE LIMIT RESET - Ayarlardan çağrılabilir!
-  static Future<bool> manualResetRateLimit() async {
-    try {
-      print('🔄 Manuel FCM rate limit reset başlatılıyor...');
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('fcm_token_fail_time');
-      await prefs.setInt('fcm_token_fail_count', 0);
-      
-      await _resetFcmToken();
-      
-      print('✅ Manuel rate limit reset tamamlandı!');
-      return true;
-    } catch (e) {
-      print('❌ Manuel rate limit reset hatası: $e');
-      return false;
-    }
-  }
-  
-  // TOPIC SUBSCRIBE
-  static Future<void> _subscribeToTopics() async {
-    try {
-      await _messaging!.subscribeToTopic('funbreak_customers');
-      print('✅ Müşteri topic\'ine subscribe oldu');
-    } catch (e) {
-      print('❌ Topic subscribe hatası: $e');
-    }
-  }
-  
-  // BACKGROUND MESSAGE HANDLER
-  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-    print('🔔 Background mesaj alındı: ${message.messageId}');
-    await _showLocalNotification(message);
-  }
-  
-  // PUBLIC BACKGROUND NOTIFICATION - main.dart'tan çağrılabilir!
-  static Future<void> showBackgroundNotification(RemoteMessage message) async {
-    print('🔔 [MÜŞTERİ BACKGROUND] showBackgroundNotification çağrıldı');
-    await _showLocalNotification(message);
-  }
-  
-  // FOREGROUND MESSAGE HANDLER
-  static Future<void> _onForegroundMessage(RemoteMessage message) async {
-    print('🔔 [MÜŞTERİ FOREGROUND] Mesaj alındı: ${message.messageId}');
-    print('   📊 Data: ${message.data}');
-    print('   📋 Notification: ${message.notification?.title ?? "YOK"}');
+  // Token refresh listener
+  static void _onTokenRefresh(String token) async {
+    print('🔄 [FCM] Token yenilendi: ${token.substring(0, 30)}...');
+    _cachedFcmToken = token;
     
-    // 🔥 DATA-ONLY mesajlar için notification oluştur!
-    RemoteMessage finalMessage = message;
-    if (message.notification == null && message.data.isNotEmpty) {
-      print('   🔥 DATA-ONLY mesaj - notification oluşturuluyor...');
-      final title = message.data['title'] ?? 'FunBreak Vale';
-      final body = message.data['body'] ?? 'Yeni bildirim';
-      
-      // Fake notification ekle
-      finalMessage = RemoteMessage(
-        senderId: message.senderId,
-        category: message.category,
-        collapseKey: message.collapseKey,
-        contentAvailable: message.contentAvailable,
-        data: message.data,
-        from: message.from,
-        messageId: message.messageId,
-        messageType: message.messageType,
-        mutableContent: message.mutableContent,
-        notification: RemoteNotification(title: title, body: body),
-        sentTime: message.sentTime,
-        threadId: message.threadId,
-        ttl: message.ttl,
-      );
-      print('   ✅ Notification eklendi: $title');
-    }
-    
-    await _showLocalNotification(finalMessage);
-  }
-  
-  // NOTIFICATION TAP HANDLER
-  static Future<void> _onNotificationTapped(NotificationResponse response) async {
-    print('🔔 Bildirime tıklandı: ${response.payload}');
-    
-    // Payload'a göre sayfa yönlendirme yapılabilir
-    if (response.payload != null) {
-      final data = jsonDecode(response.payload!);
-      await _handleNotificationAction(data);
-    }
-  }
-  
-  // MESSAGE OPENED APP HANDLER
-  static Future<void> _onMessageOpenedApp(RemoteMessage message) async {
-    print('🔔 Mesajdan uygulama açıldı: ${message.messageId}');
-    await _handleNotificationAction(message.data);
-  }
-  
-  // TOKEN REFRESH HANDLER
-  static Future<void> _onTokenRefresh(String token) async {
-    print('🔔 FCM Token yenilendi: ${token.substring(0, 20)}...');
-    // Backend'e token güncelleme gönder
-    await _updateTokenOnServer(token);
-  }
-  
-  // LOCAL BİLDİRİM GÖSTER (PLATFORM-AWARE!)
-  static Future<void> _showLocalNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    
-    if (notification == null) {
-      print('⚠️ Notification null - data-only mesaj');
-      return;
-    }
-    
-    print('✅ [MÜŞTERİ] Local notification gösteriliyor');
-    
-    // 🔥 PLATFORM-SPECIFIC NOTIFICATION
-    if (Platform.isIOS) {
-      // iOS - DETAYLI GÖSTER!
+    // Eğer daha önce sunucuya gönderilmişse, yeni token'ı da gönder
+    if (_fcmTokenSentToServer) {
       try {
-        final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-        print('📱 iOS bildirim gösteriliyor - ID: $notificationId');
-        print('   Title: ${notification.title}');
-        print('   Body: ${notification.body}');
+        final prefs = await SharedPreferences.getInstance();
+        final userIdStr = prefs.getString('admin_user_id') ?? 
+                          prefs.getString('customer_id') ?? 
+                          prefs.getString('user_id');
         
-        await _localNotifications.show(
-          notificationId,
-          notification.title ?? 'FunBreak Vale',
-          notification.body ?? '',
-          NotificationDetails(
-            iOS: DarwinNotificationDetails(
-              presentAlert: true,  // iOS 13 ve altı için
-              presentBanner: true, // iOS 14+ için - EKRAN ÜSTÜNDE BANNER!
-              presentList: true,   // Notification Center'da göster
-              presentBadge: true,
-              presentSound: true,
-              badgeNumber: 1,
-              subtitle: message.data['type'] ?? '',
-              threadIdentifier: 'funbreak_vale',
-            ),
-          ),
-          payload: jsonEncode(message.data),
-        );
-        print('✅ iOS notification show() çağrıldı - Banner + List + Sound + Badge');
+        if (userIdStr != null) {
+          final userId = int.tryParse(userIdStr);
+          if (userId != null && userId > 0) {
+            await _updateTokenOnServerDirect(token, userId, 'customer');
+          }
+        }
       } catch (e) {
-        print('❌ iOS notification error: $e');
-        print('❌ Stack: ${e.toString()}');
+        print('❌ [FCM] Token refresh sırasında sunucu güncelleme hatası: $e');
       }
-      return;
-    }
-    
-    // ANDROID - CHANNEL SİSTEMİ
-    final notificationType = message.data['type'] ?? message.data['notification_type'] ?? '';
-    String channelId;
-    String channelName;
-    String channelDesc;
-      
-      if (notificationType == 'driver_found') {
-        channelId = 'ride_updates_v2'; // ✅ YENİ CHANNEL!
-        channelName = 'Yolculuk Güncellemeleri';
-        channelDesc = 'Vale bulundu bildirimleri';
-      } else if (notificationType == 'ride_started') {
-        channelId = 'location_updates_v3'; // 🔥 V3 - SES FIX!
-        channelName = 'Konum Güncellemeleri';
-        channelDesc = 'Yolculuk başlatma bildirimleri';
-      } else if (notificationType == 'ride_completed') {
-        channelId = 'payment_updates_v2'; // ✅ YENİ CHANNEL!
-        channelName = 'Ödeme Bildirimleri';
-        channelDesc = 'Yolculuk tamamlanma bildirimleri';
-      } else {
-        channelId = 'funbreak_rides_v2'; // Diğerleri
-        channelName = 'Yolculuk Bildirimleri';
-        channelDesc = 'Genel yolculuk bildirimleri';
-      }
-      
-      final currentTime = DateTime.now().millisecondsSinceEpoch;
-      
-      // 🔥 UNIQUE ID - Milisaniye + microseconds + hash
-      final timestamp = DateTime.now();
-      final uniqueId = (timestamp.millisecondsSinceEpoch + timestamp.microsecond).hashCode.abs() % 2147483647;
-      
-      // 🔥 HER BİLDİRİM İÇİN FARKLI TİTREŞİM!
-      final vibrationPattern = Int64List.fromList([0, 250 + (uniqueId % 200), 250, 250]);
-      
-      // 🔥 BigTextStyle ile dikkat çekici bildirim
-      // ⚠️ PLATFORM-SPECIFIC NOTIFICATION DETAILS
-      NotificationDetails details;
-      
-      if (Platform.isIOS) {
-        // iOS için DarwinNotificationDetails
-        details = NotificationDetails(
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,  // iOS 13 ve altı
-            presentBanner: true, // ✅ iOS 14+ EKRAN BANNER!
-            presentList: true,   // ✅ Notification Center'da göster
-            presentBadge: true,
-            presentSound: true,
-            sound: 'notification.caf',  // ⚠️ iOS .caf formatı!
-            badgeNumber: 1,
-            threadIdentifier: 'funbreak_vale',
-            subtitle: 'FunBreak Vale',
-            interruptionLevel: InterruptionLevel.timeSensitive, // iOS 15+ öncelikli bildirim
-          ),
-        );
-        
-      } else {
-        // Android için AndroidNotificationDetails (MEVCUT SISTEM)
-        final BigTextStyleInformation bigTextStyle = BigTextStyleInformation(
-          notification.body ?? '',
-          contentTitle: notification.title,
-          htmlFormatContentTitle: true,
-          htmlFormatBigText: true,
-        );
-        
-        details = NotificationDetails(
-          android: AndroidNotificationDetails(
-            channelId,
-            channelName,
-            channelDescription: channelDesc,
-            importance: Importance.max,
-            priority: Priority.max,
-            icon: '@mipmap/ic_launcher',
-            playSound: true,
-            enableVibration: true,
-            visibility: NotificationVisibility.public,
-            showWhen: true,
-            when: currentTime,
-            ticker: '${notification.title} - $uniqueId', // 🔥 Her bildirim FARKLI ticker
-            autoCancel: true, 
-            onlyAlertOnce: false, // 🔥 Her seferinde uyar
-            enableLights: true,
-            ledColor: const Color(0xFFFFD700),
-            ledOnMs: 1000,
-            ledOffMs: 500,
-            category: AndroidNotificationCategory.call, // 🔥 Heads-up için
-            groupKey: 'funbreak_$uniqueId', // 🔥 Her bildirim KENDİ GRUBU!
-            setAsGroupSummary: false,
-            styleInformation: bigTextStyle,
-            tag: 'notification_$uniqueId', // 🔥 Her bildirim unique tag!
-            channelShowBadge: true,
-            vibrationPattern: vibrationPattern, // 🔥 HER BİLDİRİM FARKLI TİTREŞİR!
-            timeoutAfter: null, // 🔥 Timeout yok
-          ),
-        );
-      }
-      
-      // 🔥 UNIQUE ID İLE HER BİLDİRİM AYRI!
-      await _localNotifications.show(
-        uniqueId,
-        notification.title,
-        notification.body,
-        details,
-        payload: jsonEncode(message.data),
-      );
-      
-      print('🔔 BİLDİRİM GÖSTERİLDİ:');
-      print('   ID: $uniqueId (UNIQUE - timestamp)');
-      print('   Kanal: $channelId');
-      print('   Başlık: ${notification.title}');
-      print('   Type: $notificationType');
-      print('   Ses: ✅ Titreşim: ✅ LED: ✅ Importance: MAX');
-  }
-  
-  // BİLDİRİM AKSİYON HANDLER
-  static Future<void> _handleNotificationAction(Map<String, dynamic> data) async {
-    final type = data['notification_type'] ?? '';
-    
-    print('🔔 Bildirim aksiyonu: $type');
-    
-    // Bildirim türüne göre sayfa yönlendirme
-    switch (type) {
-      case 'driver_found':
-      case 'driver_approaching':
-      case 'driver_arrived':
-        // Ana sayfaya git (harita göster)
-        break;
-      case 'ride_completed':
-        // Geçmiş yolculuklara git  
-        break;
-      case 'payment_processed':
-        // Ödeme geçmişine git
-        break;
-        // new_campaign kaldırıldı
     }
   }
   
-  // SUNUCUYA TOKEN GÜNCELLE
-  static Future<void> _updateTokenOnServer(String token) async {
+  // Direkt sunucu güncelleme (token refresh için)
+  static Future<void> _updateTokenOnServerDirect(String token, int userId, String userType) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // 🔍 user_id VEYA admin_user_id VEYA customer_id - hepsini dene!
-      String userId = prefs.getString('user_id') ?? 
-                      prefs.getString('admin_user_id') ?? 
-                      prefs.getInt('customer_id')?.toString() ?? '0';
-      
-      if (userId == '0') {
-        print('⚠️ FCM Token kaydetme atlandı - kullanıcı ID bulunamadı');
-        return;
-      }
-      
-      print('📤 FCM Token backend\'e gönderiliyor... (userId: $userId)');
-      
       final response = await http.post(
         Uri.parse('$baseUrl/update_fcm_token.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
-          'user_type': 'customer',
+          'user_type': userType,
           'fcm_token': token,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          print('✅ FCM Token sunucuya kaydedildi! (userId: $userId)');
-        } else {
-          print('⚠️ FCM Token kayıt yanıtı: ${data['message'] ?? 'bilinmiyor'}');
-        }
-      } else {
-        print('❌ FCM Token kayıt HTTP hatası: ${response.statusCode}');
+        print('✅ [FCM] Token refresh - sunucu güncellendi');
       }
     } catch (e) {
-      print('❌ Token güncelleme hatası: $e');
+      print('❌ [FCM] Token refresh sunucu hatası: $e');
     }
   }
   
-  // MANUEl BİLDİRİM GÖNDER
-  static Future<bool> sendNotification({
-    required String notificationType,
-    Map<String, dynamic> data = const {},
-  }) async {
+  // Topic'lere abone ol
+  static Future<void> _subscribeToTopics() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? '0';
-      
-      final config = _customerNotifications[notificationType];
-      if (config == null) {
-        print('❌ Bilinmeyen bildirim türü: $notificationType');
-        return false;
-      }
-      
-      final response = await http.post(
-        Uri.parse('$baseUrl/send_advanced_notification.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'user_type': 'customer',
-          'notification_type': notificationType,
-          'title': config.title,
-          'message': _formatMessage(config.title, data),
-          'data': data,
-        }),
-      );
-      
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        return result['success'] == true;
-      }
-      
-      return false;
+      await _messaging!.subscribeToTopic('customers');
+      await _messaging!.subscribeToTopic('all_users');
+      print('✅ [FCM] Topic\'lere abone olundu: customers, all_users');
     } catch (e) {
-      print('❌ Manuel bildirim gönderim hatası: $e');
-      return false;
+      print('❌ [FCM] Topic abonelik hatası: $e');
     }
   }
   
-  // MESAJ FORMATLAMA
-  static String _formatMessage(String template, Map<String, dynamic> data) {
-    String message = template;
+  // FOREGROUND MESSAGE HANDLER
+  static void _onForegroundMessage(RemoteMessage message) async {
+    print('📱 === MÜŞTERİ FOREGROUND BİLDİRİM ===');
+    print('   📋 Title: ${message.notification?.title}');
+    print('   💬 Body: ${message.notification?.body}');
+    print('   📊 Data: ${message.data}');
+    print('   🏷️ Type: ${message.data['type'] ?? 'bilinmeyen'}');
     
-    // Template'deki değişkenleri data ile değiştir
-    data.forEach((key, value) {
-      message = message.replaceAll('{$key}', value.toString());
-    });
-    
-    return message;
+    // iOS'ta foreground notification otomatik gösterilir (setForegroundNotificationPresentationOptions)
+    // Android'de manuel göster
+    if (Platform.isAndroid) {
+      await _showNotification(message);
+    }
   }
   
-  // BİLDİRİM GEÇMİŞİ ÇEK
-  static Future<List<Map<String, dynamic>>> getNotificationHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? '0';
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/get_notification_history.php?user_id=$userId&user_type=customer'),
-        headers: {'Content-Type': 'application/json'},
-      );
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          return List<Map<String, dynamic>>.from(data['notifications'] ?? []);
-        }
-      }
-      
-      return [];
-    } catch (e) {
-      print('❌ Bildirim geçmişi çekme hatası: $e');
-      return [];
-    }
+  // MESSAGE OPENED APP HANDLER
+  static void _onMessageOpenedApp(RemoteMessage message) {
+    print('📱 [MÜŞTERİ] Notification tap: ${message.data}');
+    // Navigation işlemleri burada yapılabilir
+  }
+  
+  // NOTIFICATION TAP HANDLER
+  static void _onNotificationTapped(NotificationResponse response) {
+    print('🔔 [MÜŞTERİ] Local notification tapped: ${response.payload}');
+  }
+  
+  // ANDROID LOCAL NOTIFICATION GÖSTER
+  static Future<void> _showNotification(RemoteMessage message) async {
+    if (Platform.isIOS) return; // iOS'ta APNs gösterir
+    
+    final notification = message.notification;
+    if (notification == null) return;
+    
+    final type = message.data['type'] ?? 'default';
+    final config = _customerNotifications[type] ?? _customerNotifications['driver_found']!;
+    
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      notification.title ?? config.title,
+      notification.body ?? '',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          '${config.channelId}_v2',
+          config.title,
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('notification'),
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFFFFD700),
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          fullScreenIntent: true,
+          category: AndroidNotificationCategory.message,
+          visibility: NotificationVisibility.public,
+        ),
+      ),
+      payload: jsonEncode(message.data),
+    );
+    
+    print('✅ [MÜŞTERİ] Local notification gösterildi: ${notification.title}');
+  }
+  
+  // BACKGROUND NOTIFICATION GÖSTER (main.dart'tan çağrılır)
+  static Future<void> showBackgroundNotification(RemoteMessage message) async {
+    if (Platform.isIOS) return; // iOS'ta APNs gösterir
+    
+    final notification = message.notification;
+    final title = notification?.title ?? message.data['title'] ?? 'FunBreak Vale';
+    final body = notification?.body ?? message.data['body'] ?? '';
+    
+    final type = message.data['type'] ?? 'default';
+    final config = _customerNotifications[type] ?? _customerNotifications['driver_found']!;
+    
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          '${config.channelId}_v2',
+          config.title,
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('notification'),
+          fullScreenIntent: true,
+        ),
+      ),
+      payload: jsonEncode(message.data),
+    );
+    
+    print('✅ [MÜŞTERİ] Background notification gösterildi: $title');
   }
 }
 
-// BİLDİRİM KONFİGÜRASYON SINIFI
+// NOTIFICATION CONFIG CLASS
 class NotificationConfig {
   final String title;
   final String channelId;
   final String priority;
   final String sound;
-  
+
   const NotificationConfig({
     required this.title,
     required this.channelId,

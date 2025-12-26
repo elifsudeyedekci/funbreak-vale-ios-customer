@@ -232,6 +232,8 @@ class AuthProvider with ChangeNotifier {
         // Session bilgilerini kaydet
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('admin_user_id', adminResult['user']['id'].toString());
+        await prefs.setString('customer_id', adminResult['user']['id'].toString()); // FCM için!
+        await prefs.setInt('customer_id', int.parse(adminResult['user']['id'].toString())); // Int!
         await prefs.setString('user_email', email);
         await prefs.setString('user_name', name);
         await prefs.setString('user_phone', phone);
@@ -321,6 +323,8 @@ class AuthProvider with ChangeNotifier {
         // Session bilgilerini kaydet
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('admin_user_id', user['id'].toString());
+        await prefs.setString('customer_id', user['id'].toString()); // FCM için!
+        await prefs.setInt('customer_id', int.parse(user['id'].toString())); // Int!
         await prefs.setString('user_email', user['email']);
         await prefs.setString('user_name', user['name']);
         await prefs.setString('user_phone', user['phone'] ?? '');
@@ -507,15 +511,41 @@ class AuthProvider with ChangeNotifier {
   }
   
   // ✅ FCM TOKEN GÜNCELLEME - LOGIN/REGISTER SONRASI OTOMATIK ÇAĞRILIR!
-  // ✅ RATE LIMIT HATASINI ÖNLEMEK İÇİN AdvancedNotificationService KULLANILIYOR!
+  // 🔥 V2.0 - RATE LIMIT SORUNU ÇÖZÜLDÜ!
   Future<void> _updateFCMToken() async {
-    print('🔔 iOS CUSTOMER: _updateFCMToken() - AdvancedNotificationService kullanılıyor');
+    print('🔔 iOS CUSTOMER: _updateFCMToken() - V2.0 (Rate Limit Fix)');
     
     try {
-      // Token alma işlemi AdvancedNotificationService.initialize() tarafından yapılacak
-      // Bu fonksiyon sadece initialize çağırıyor - rate limit hatası önleniyor
-      await AdvancedNotificationService.initialize();
-      print('✅ FCM Token güncelleme AdvancedNotificationService tarafından yapılacak');
+      // Customer ID'yi al
+      final prefs = await SharedPreferences.getInstance();
+      final customerIdStr = prefs.getString('admin_user_id') ?? 
+                            prefs.getString('customer_id') ?? 
+                            prefs.getString('user_id');
+      
+      if (customerIdStr == null || customerIdStr.isEmpty) {
+        print('❌ FCM: Customer ID bulunamadı - token kaydedilemedi');
+        return;
+      }
+      
+      final customerId = int.tryParse(customerIdStr);
+      if (customerId == null || customerId <= 0) {
+        print('❌ FCM: Geçersiz Customer ID: $customerIdStr');
+        return;
+      }
+      
+      print('🔔 FCM: Token kaydediliyor - Customer ID: $customerId');
+      
+      // 🔥 YENİ: registerFcmToken() kullan - TEK DENEME, RATE LIMIT YOK!
+      final success = await AdvancedNotificationService.registerFcmToken(
+        customerId, 
+        userType: 'customer',
+      );
+      
+      if (success) {
+        print('✅ FCM Token başarıyla kaydedildi!');
+      } else {
+        print('⚠️ FCM Token kaydedilemedi (ama uygulama çalışmaya devam edecek)');
+      }
     } catch (e) {
       print('⚠️ FCM Token güncelleme hatası: $e');
     }

@@ -141,45 +141,17 @@ void main() async {
     },
   );
   
-  // FCM TOKEN KAYDETME - UYGULAMA AÇILDIĞINDA OTOMATIK!
-  try {
-    await _initializeFirebaseMessaging().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚡ FCM setup timeout - arka planda devam edecek');
-      },
-    );
-    print('✅ FCM token kaydetme tamamlandı');
-  } catch (e) {
-    print('⚠️ FCM setup hatası (devam ediliyor): $e');
-  }
+  // 🔥 FCM TOKEN ARTIK BURADA ALINMIYOR!
+  // Token sadece login başarılı olduktan sonra auth_provider.dart'tan alınacak
+  // Bu sayede "Too many server requests" hatası önleniyor
+  print('✅ [MAIN] FCM token login sonrası alınacak (Rate Limit Fix)');
   
   runApp(const MyApp());
 }
 
-// FCM Token alma için GLOBAL KİLİT!
-bool _isFcmInitRunning = false;
-bool _isFcmInitCompleted = false;
-
-Future<void> _initializeFirebaseMessaging() async {
-  if (_isFcmInitRunning || _isFcmInitCompleted) {
-    print('⚠️ FCM setup zaten çalışıyor veya tamamlandı - atlanıyor');
-    return;
-  }
-  
-  _isFcmInitRunning = true;
-  
-  // ✅ TÜM FCM İŞLEMLERİ AdvancedNotificationService TARAFINDAN YAPILIYOR!
-  // ⚠️ BURADA requestPermission() ÇAĞIRMIYORUZ - "Too many server requests" hatasını önlemek için!
-  // AdvancedNotificationService.initialize() zaten _requestPermissions() çağırıyor.
-  
-  print('✅ MÜŞTERİ FCM setup - AdvancedNotificationService tüm işlemleri yönetiyor');
-  print('   📱 Permission: AdvancedNotificationService._requestPermissions()');
-  print('   🔑 Token: AdvancedNotificationService._getFcmTokenDirect()');
-  
-  _isFcmInitCompleted = true; // 🔥 Tamamlandı!
-  _isFcmInitRunning = false; // Kilidi aç (ama completed true kaldığı için tekrar giremez)
-}
+// 🔥 FCM artık main.dart'tan yönetilmiyor!
+// Tüm FCM işlemleri AdvancedNotificationService.registerFcmToken() ile yapılıyor
+// Bu fonksiyon auth_provider.dart'tan login sonrası çağrılıyor
 
 // MÜŞTERİ FCM TOKEN KAYDETME - ŞOFÖR GİBİ ÇALIŞIYOR!
 Future<void> _saveCustomerFCMToken(String fcmToken) async {
@@ -255,20 +227,17 @@ Future<void> _saveCustomerFCMToken(String fcmToken) async {
 // ⚠️ PLATFORM-SPECIFIC İZİN SİSTEMİ
 Future<void> requestPermissions() async {
   try {
-    if (Platform.isIOS) {
-      // ✅ iOS için bildirim izni AdvancedNotificationService tarafından istenecek!
-      // "Too many server requests" hatasını önlemek için burada requestPermission() ÇAĞIRMIYORUZ!
-      print('📱 iOS izinleri isteniyor...');
-      print('📱 iOS: Bildirim izni AdvancedNotificationService tarafından istenecek');
+    // 🔥 BİLDİRİM İZNİ BURADA İSTENMİYOR!
+    // AdvancedNotificationService.registerFcmToken() içinde isteniyor (login sonrası)
+    // Bu sayede izin 2 kere istenmez
+    print('📱 Bildirim izni login sonrası istenecek');
     
-    // Konum izni (sadece konum, bildirim değil)
+    // Konum izni
+    if (Platform.isIOS) {
       await Permission.locationWhenInUse.request();
       await Permission.locationAlways.request();
-      
     } else if (Platform.isAndroid) {
-      // Android için mevcut sistem
-      await Permission.notification.request();
-    await Permission.location.request();
+      await Permission.location.request();
     }
     
     print('✅ İzinler istendi (${Platform.operatingSystem})');
