@@ -170,6 +170,9 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
               await authProvider.checkAuthStatus();
             }
             
+            // 📱 FCM TOKEN KAYDET (Bildirimler için!) - ARKA PLANDA, BEKLEMEDEN!
+            _saveFCMToken(userId); // await YOK - kullanıcı beklemez!
+            
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const MainScreen()),
