@@ -21,8 +21,8 @@ class AdvancedNotificationService {
   static String? _cachedFcmToken;
   static StreamSubscription<RemoteMessage>? _foregroundSubscription;
   
-  // 🔥 YENİ: FCM token sadece 1 kez alınsın
-  static bool _fcmTokenRequested = false;
+  // 🔥 YENİ: FCM token sadece 1 kez alınsın - COMPLETER PATTERN!
+  static Completer<bool>? _fcmCompleter; // Tek istek için kilit
   static bool _fcmTokenSentToServer = false;
   
   // MÜŞTERİ BİLDİRİM TÜRLERİ
@@ -154,21 +154,37 @@ class AdvancedNotificationService {
   // 🔥 YENİ: FCM TOKEN KAYDETME - SADECE LOGIN SONRASI ÇAĞRILMALI!
   // Bu fonksiyon auth_provider.dart'tan login başarılı olduktan sonra çağrılacak
   static Future<bool> registerFcmToken(int userId, {String userType = 'customer'}) async {
-    // 🔥 RACE CONDITION FIX: Flag'i EN BAŞTA, senkron olarak kontrol et ve ayarla!
-    // Bu sayede aynı anda gelen çağrılar engellenir
-    if (_fcmTokenRequested) {
-      print('⏳ [FCM] Token zaten isteniyor - ATLANIYORUM (User: $userId)');
-      return false; // Beklemeden dön, diğer çağrı halledecek
+    // 🔥 COMPLETER PATTERN: Aynı anda gelen tüm çağrılar aynı sonucu bekler!
+    if (_fcmCompleter != null) {
+      print('⏳ [FCM] Token zaten isteniyor - SONUÇ BEKLENİYOR (User: $userId)');
+      return await _fcmCompleter!.future; // Aynı sonucu bekle
     }
-    _fcmTokenRequested = true; // HEMEN ayarla, async işlemden ÖNCE!
     
+    // İlk çağrı: Completer oluştur ve işlemi başlat
+    _fcmCompleter = Completer<bool>();
     print('🔔 [FCM] registerFcmToken BAŞLADI - User: $userId, Type: $userType');
     
     // Zaten backend'e gönderildiyse tekrar gönderme
     if (_fcmTokenSentToServer && _cachedFcmToken != null) {
       print('✅ [FCM] Token zaten backend\'e gönderildi - atlanıyor');
-      _fcmTokenRequested = false;
+      _fcmCompleter!.complete(true);
+      _fcmCompleter = null;
       return true;
+    }
+    
+    // Önce cache'e bak (SharedPreferences)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedToken = prefs.getString('fcm_token_cached');
+      if (cachedToken != null && cachedToken.isNotEmpty) {
+        print('✅ [FCM] Cache\'den token bulundu - backend\'e gönderiliyor');
+        final success = await _sendTokenToBackend(cachedToken, userId, userType);
+        _fcmCompleter!.complete(success);
+        _fcmCompleter = null;
+        return success;
+      }
+    } catch (e) {
+      print('⚠️ [FCM] Cache okuma hatası: $e');
     }
     
     try {
@@ -185,7 +201,8 @@ class AdvancedNotificationService {
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
           settings.authorizationStatus != AuthorizationStatus.provisional) {
         print('❌ [FCM] Bildirim izni reddedildi');
-        _fcmTokenRequested = false;
+        _fcmCompleter!.complete(false);
+        _fcmCompleter = null;
         return false;
       }
       
@@ -274,7 +291,8 @@ class AdvancedNotificationService {
         
         if (token == null || token.isEmpty) {
           print('❌ [FCM] Tüm yöntemler başarısız');
-          _fcmTokenRequested = false;
+          _fcmCompleter!.complete(false);
+          _fcmCompleter = null;
           return false;
         }
       }
@@ -282,7 +300,42 @@ class AdvancedNotificationService {
       print('✅ [FCM] Token alındı: ${token.substring(0, 30)}...');
       _cachedFcmToken = token;
       
-      // 5. Backend'e gönder
+      // Token'ı cache'e kaydet
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fcm_token_cached', token);
+        print('💾 [FCM] Token cache\'e kaydedildi');
+      } catch (e) {
+        print('⚠️ [FCM] Cache kaydetme hatası: $e');
+      }
+      
+      // Backend'e gönder
+      final success = await _sendTokenToBackend(token, userId, userType);
+      _fcmCompleter!.complete(success);
+      _fcmCompleter = null;
+      return success;
+      
+    } catch (e) {
+      print('❌ [FCM] registerFcmToken hatası: $e');
+      
+      // Rate limit hatası varsa kaydet
+      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
+        print('🛑 [FCM] RATE LIMIT! 5 dakika bekleyin.');
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('fcm_rate_limit_time', DateTime.now().toIso8601String());
+        } catch (_) {}
+      }
+      
+      _fcmCompleter?.complete(false);
+      _fcmCompleter = null;
+      return false;
+    }
+  }
+  
+  // 🔥 Backend'e token gönderme helper fonksiyonu
+  static Future<bool> _sendTokenToBackend(String token, int userId, String userType) async {
+    try {
       print('📡 [FCM] Token backend\'e gönderiliyor...');
       final response = await http.post(
         Uri.parse('$baseUrl/update_fcm_token.php'),
@@ -299,6 +352,7 @@ class AdvancedNotificationService {
         if (data['success'] == true) {
           print('✅ [FCM] Token backend\'e kaydedildi!');
           _fcmTokenSentToServer = true;
+          _cachedFcmToken = token;
           
           // Topic'lere subscribe
           await _subscribeToTopics();
@@ -310,22 +364,10 @@ class AdvancedNotificationService {
       } else {
         print('❌ [FCM] HTTP hatası: ${response.statusCode}');
       }
-      
       return false;
-      
     } catch (e) {
-      print('❌ [FCM] registerFcmToken hatası: $e');
-      
-      // Rate limit hatası varsa kaydet
-      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
-        print('🛑 [FCM] RATE LIMIT! 5 dakika bekleyin.');
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('fcm_rate_limit_time', DateTime.now().toIso8601String());
-      }
-      
+      print('❌ [FCM] Backend gönderme hatası: $e');
       return false;
-    } finally {
-      _fcmTokenRequested = false;
     }
   }
   
@@ -335,7 +377,7 @@ class AdvancedNotificationService {
   // 🔥 Token durumunu sıfırla (logout için)
   static void resetTokenState() {
     _cachedFcmToken = null;
-    _fcmTokenRequested = false;
+    _fcmCompleter = null;
     _fcmTokenSentToServer = false;
     print('🔄 [FCM] Token durumu sıfırlandı');
   }
