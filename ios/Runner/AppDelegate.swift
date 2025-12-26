@@ -45,6 +45,23 @@ import UserNotifications  // ⚠️ UserNotifications import!
     // ⚠️ Background fetch için minimum interval ayarla
     application.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
     
+    // 🔥 GPT DEBUG: 3sn sonra Native'den token iste - GERÇEK HATAYI GÖR!
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+      Messaging.messaging().token { token, error in
+        if let error = error {
+          print("❌ [NATIVE] Messaging.token ERROR: \(error)")
+          print("❌ [NATIVE] Error localizedDescription: \(error.localizedDescription)")
+          // NSError detayları
+          let nsError = error as NSError
+          print("❌ [NATIVE] Error domain: \(nsError.domain)")
+          print("❌ [NATIVE] Error code: \(nsError.code)")
+          print("❌ [NATIVE] Error userInfo: \(nsError.userInfo)")
+        } else {
+          print("✅ [NATIVE] Messaging.token SUCCESS: \(token ?? "nil")")
+        }
+      }
+    }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
   
