@@ -217,39 +217,43 @@ class AdvancedNotificationService {
         }
       }
       
-      // 4. FCM Token al (TEK DENEME!)
-      print('🔑 [FCM] Token alınıyor (tek deneme)...');
+      // 4. 🔥 GPT FIX: APNs → Firebase senkronizasyonu için 2sn bekle!
+      print('⏳ [FCM] APNs → Firebase senkronizasyonu için 2sn bekleniyor...');
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // 5. FCM Token al (5 DENEME + ARTAN BEKLEME!)
+      print('🔑 [FCM] Token alınıyor (5 deneme)...');
       String? token;
       
-      try {
-        token = await _messaging!.getToken().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            print('⏱️ [FCM] Token alma timeout (10s)');
-            return null;
-          },
-        );
-      } catch (tokenError) {
-        print('⚠️ [FCM] İlk token denemesi başarısız: $tokenError');
-        
-        // Firebase Installations sıfırla ve tekrar dene
-        print('🔄 [FCM] Firebase Installations sıfırlanıyor...');
+      for (int i = 0; i < 5; i++) {
         try {
-          await _messaging!.deleteToken();
-          await Future.delayed(const Duration(seconds: 2));
-          
-          print('🔑 [FCM] Token tekrar alınıyor...');
+          print('🔑 [FCM] Deneme ${i + 1}/5...');
           token = await _messaging!.getToken().timeout(
             const Duration(seconds: 10),
-            onTimeout: () => null,
+            onTimeout: () {
+              print('⏱️ [FCM] Deneme ${i + 1} timeout');
+              return null;
+            },
           );
-        } catch (retryError) {
-          print('❌ [FCM] İkinci deneme de başarısız: $retryError');
+          
+          if (token != null && token.isNotEmpty) {
+            print('✅ [FCM] Token ${i + 1}. denemede alındı!');
+            break;
+          }
+        } catch (tokenError) {
+          print('⚠️ [FCM] Deneme ${i + 1} başarısız: $tokenError');
+        }
+        
+        // Her denemede artan bekleme (2s, 4s, 6s, 8s, 10s)
+        if (i < 4) {
+          final waitSeconds = 2 * (i + 1);
+          print('⏳ [FCM] ${waitSeconds}sn bekleniyor...');
+          await Future.delayed(Duration(seconds: waitSeconds));
         }
       }
       
-      if (token == null) {
-        print('❌ [FCM] Token alınamadı');
+      if (token == null || token.isEmpty) {
+        print('❌ [FCM] 5 denemede de token alınamadı');
         _fcmTokenRequested = false;
         return false;
       }
