@@ -142,7 +142,14 @@ class AuthProvider with ChangeNotifier {
         
         print('✅ Session yüklendi - Name: $_customerName, Email: $_userEmail');
         
-        // ✅ FCM main.dart'ta çalışacak - burada uğraşma!
+        // 🔥 AUTO-LOGIN DURUMUNDA DA FCM TOKEN KAYDET!
+        print('🔔 AUTO-LOGIN: FCM Token kaydediliyor...');
+        _updateFCMToken().then((_) {
+          print('✅ AUTO-LOGIN: FCM Token kaydedildi!');
+        }).catchError((e) {
+          print('⚠️ AUTO-LOGIN: FCM Token hatası: $e');
+        });
+        
         notifyListeners();
       }
     } catch (e) {

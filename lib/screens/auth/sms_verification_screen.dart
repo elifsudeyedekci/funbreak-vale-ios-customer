@@ -267,18 +267,31 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   }
 
   /// 📱 FCM TOKEN KAYDETME FONKSİYONU
-  /// ✅ RATE LIMIT HATASINI ÖNLEMEK İÇİN AdvancedNotificationService KULLANILIYOR!
+  /// 🔥 V2.0 - RATE LIMIT SORUNU ÇÖZÜLDÜ!
   Future<void> _saveFCMToken(String userId) async {
     try {
-      print('🔔 _saveFCMToken: AdvancedNotificationService kullanılıyor - userId: $userId');
-      // Token alma işlemi AdvancedNotificationService.init() tarafından yapılacak
-      // Bu fonksiyon sadece SharedPreferences'a userId kaydedip init çağırıyor
+      print('🔔 _saveFCMToken: registerFcmToken kullanılıyor - userId: $userId');
+      
+      // User ID'yi kaydet
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_id', userId);
+      await prefs.setString('customer_id', userId);
       
-      // AdvancedNotificationService zaten token alıp kaydedecek
-      await AdvancedNotificationService.initialize();
-      print('✅ FCM Token kaydetme AdvancedNotificationService tarafından yapılacak');
+      // 🔥 YENİ: registerFcmToken() kullan - TEK DENEME, RATE LIMIT YOK!
+      final userIdInt = int.tryParse(userId) ?? 0;
+      if (userIdInt > 0) {
+        final success = await AdvancedNotificationService.registerFcmToken(
+          userIdInt,
+          userType: 'customer',
+        );
+        if (success) {
+          print('✅ FCM Token başarıyla kaydedildi!');
+        } else {
+          print('⚠️ FCM Token kaydedilemedi (ama uygulama çalışmaya devam edecek)');
+        }
+      } else {
+        print('❌ Geçersiz userId: $userId');
+      }
     } catch (e) {
       print('⚠️ FCM Token kaydetme hatası (devam ediliyor): $e');
     }
