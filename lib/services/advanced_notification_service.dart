@@ -153,23 +153,22 @@ class AdvancedNotificationService {
   // 🔥 YENİ: FCM TOKEN KAYDETME - SADECE LOGIN SONRASI ÇAĞRILMALI!
   // Bu fonksiyon auth_provider.dart'tan login başarılı olduktan sonra çağrılacak
   static Future<bool> registerFcmToken(int userId, {String userType = 'customer'}) async {
-    print('🔔 [FCM] registerFcmToken çağrıldı - User: $userId, Type: $userType');
+    // 🔥 RACE CONDITION FIX: Flag'i EN BAŞTA, senkron olarak kontrol et ve ayarla!
+    // Bu sayede aynı anda gelen çağrılar engellenir
+    if (_fcmTokenRequested) {
+      print('⏳ [FCM] Token zaten isteniyor - ATLANIYORUM (User: $userId)');
+      return false; // Beklemeden dön, diğer çağrı halledecek
+    }
+    _fcmTokenRequested = true; // HEMEN ayarla, async işlemden ÖNCE!
+    
+    print('🔔 [FCM] registerFcmToken BAŞLADI - User: $userId, Type: $userType');
     
     // Zaten backend'e gönderildiyse tekrar gönderme
     if (_fcmTokenSentToServer && _cachedFcmToken != null) {
       print('✅ [FCM] Token zaten backend\'e gönderildi - atlanıyor');
+      _fcmTokenRequested = false;
       return true;
     }
-    
-    // Zaten istek yapılıyorsa bekle
-    if (_fcmTokenRequested) {
-      print('⏳ [FCM] Token zaten isteniyor - bekleniyor...');
-      // 5 saniye bekle ve cache'i kontrol et
-      await Future.delayed(const Duration(seconds: 5));
-      return _cachedFcmToken != null;
-    }
-    
-    _fcmTokenRequested = true;
     
     try {
       // 1. Önce izin iste
