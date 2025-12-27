@@ -263,6 +263,17 @@ class AdvancedNotificationService {
         }
       } catch (tokenError) {
         print('⚠️ [FCM] Token alma başarısız: $tokenError');
+        
+        // 🔍 NATIVE HATASI: Gerçek iOS hatasını al
+        if (Platform.isIOS) {
+          try {
+            const channel = MethodChannel('debug_fcm');
+            final nativeResult = await channel.invokeMethod('getNativeFcmToken');
+            print('🔍 [NATIVE] Token: $nativeResult');
+          } catch (nativeError) {
+            print('🔍 [NATIVE HATA] $nativeError');
+          }
+        }
       }
       
       // Token alınamadıysa - 2 DAKİKA SONRA OTOMATİK TEKRAR DENE!
