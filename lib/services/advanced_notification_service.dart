@@ -185,17 +185,29 @@ class AdvancedNotificationService {
     print('🔔 [FCM] registerFcmToken BAŞLADI - User: $userId, Type: $userType');
     
     try {
-      // Önce cache'e bak (SharedPreferences)
+      // Önce cache'e bak (SharedPreferences) - iOS/Android ayrı
       try {
         final prefs = await SharedPreferences.getInstance();
-        final cachedToken = prefs.getString('fcm_token_cached');
-        if (cachedToken != null && cachedToken.isNotEmpty) {
-          print('✅ [FCM] Cache\'den token bulundu - backend\'e gönderiliyor');
-          final success = await _sendTokenToBackend(cachedToken, userId, userType);
-          return success;
+        
+        if (Platform.isIOS) {
+          // iOS: APNs token cache'i kontrol et
+          final cachedApnsToken = prefs.getString('apns_token_cached');
+          if (cachedApnsToken != null && cachedApnsToken.isNotEmpty) {
+            print('✅ [APNs] Cache\'den token bulundu - backend\'e gönderiliyor');
+            final success = await _sendApnsTokenToBackend(cachedApnsToken, userId, userType);
+            return success;
+          }
+        } else {
+          // Android: FCM token cache'i kontrol et
+          final cachedToken = prefs.getString('fcm_token_cached');
+          if (cachedToken != null && cachedToken.isNotEmpty) {
+            print('✅ [FCM] Cache\'den token bulundu - backend\'e gönderiliyor');
+            final success = await _sendTokenToBackend(cachedToken, userId, userType);
+            return success;
+          }
         }
       } catch (e) {
-        print('⚠️ [FCM] Cache okuma hatası: $e');
+        print('⚠️ Cache okuma hatası: $e');
       }
       
       // 1. Önce izin iste
@@ -223,30 +235,45 @@ class AdvancedNotificationService {
         );
       }
       
-      // 3. iOS'ta APNs token bekle (max 5 saniye - kısaltıldı)
+      // 🍎 iOS: DOĞRUDAN APNs TOKEN KULLAN (Firebase bypass!)
       if (Platform.isIOS) {
-        print('📱 [FCM] iOS - APNs token bekleniyor...');
+        print('🍎 [APNs] iOS - APNs token alınıyor (Firebase bypass)...');
         String? apnsToken;
-        for (int i = 0; i < 5; i++) {
+        
+        for (int i = 0; i < 10; i++) {
           apnsToken = await _messaging!.getAPNSToken();
           if (apnsToken != null) {
-            print('✅ [FCM] APNs token alındı (${i+1}. deneme)');
+            print('✅ [APNs] Token alındı (${i+1}. deneme)');
             break;
           }
-          await Future.delayed(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
         }
         
-        if (apnsToken == null) {
-          print('⚠️ [FCM] APNs token 5 saniyede alınamadı - devam ediliyor');
+        if (apnsToken != null && apnsToken.isNotEmpty) {
+          print('🍎 [APNs] Token: ${apnsToken.substring(0, 20)}...');
+          _cachedFcmToken = apnsToken; // APNs token'ı cache'e kaydet
+          
+          // APNs token'ı cache'e kaydet
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('apns_token_cached', apnsToken);
+            print('💾 [APNs] Token cache\'e kaydedildi');
+          } catch (e) {
+            print('⚠️ [APNs] Cache kaydetme hatası: $e');
+          }
+          
+          // Backend'e APNs token gönder
+          final success = await _sendApnsTokenToBackend(apnsToken, userId, userType);
+          return success;
+        } else {
+          print('❌ [APNs] Token alınamadı - 2 dakika sonra tekrar denenecek');
+          _scheduleRetry(userId, userType);
+          return false;
         }
       }
       
-      // 4. APNs → Firebase senkronizasyonu için 2sn bekle
-      print('⏳ [FCM] APNs → Firebase senkronizasyonu için 2sn bekleniyor...');
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // 5. 🔥 GPT FIX: SADECE 1 DENEME! (Rate limit'i önle)
-      print('🔑 [FCM] Token alınıyor (TEK DENEME)...');
+      // 🤖 Android: FCM token kullan
+      print('🤖 [FCM] Android - FCM token alınıyor...');
       String? token;
       
       try {
@@ -263,17 +290,6 @@ class AdvancedNotificationService {
         }
       } catch (tokenError) {
         print('⚠️ [FCM] Token alma başarısız: $tokenError');
-        
-        // 🔍 NATIVE HATASI: Gerçek iOS hatasını al
-        if (Platform.isIOS) {
-          try {
-            const channel = MethodChannel('debug_fcm');
-            final nativeResult = await channel.invokeMethod('getNativeFcmToken');
-            print('🔍 [NATIVE] Token: $nativeResult');
-          } catch (nativeError) {
-            print('🔍 [NATIVE HATA] $nativeError');
-          }
-        }
       }
       
       // Token alınamadıysa - 2 DAKİKA SONRA OTOMATİK TEKRAR DENE!
@@ -295,7 +311,7 @@ class AdvancedNotificationService {
         print('⚠️ [FCM] Cache kaydetme hatası: $e');
       }
       
-      // Backend'e gönder
+      // Backend'e gönder (Android - FCM)
       final success = await _sendTokenToBackend(token, userId, userType);
       return success;
       
@@ -308,7 +324,7 @@ class AdvancedNotificationService {
     }
   }
   
-  // 🔥 Backend'e token gönderme helper fonksiyonu
+  // 🔥 Backend'e token gönderme helper fonksiyonu (Android FCM)
   static Future<bool> _sendTokenToBackend(String token, int userId, String userType) async {
     try {
       print('📡 [FCM] Token backend\'e gönderiliyor...');
@@ -319,6 +335,7 @@ class AdvancedNotificationService {
           'user_id': userId,
           'user_type': userType,
           'fcm_token': token,
+          'device_type': 'android',
         }),
       ).timeout(const Duration(seconds: 10));
       
@@ -342,6 +359,45 @@ class AdvancedNotificationService {
       return false;
     } catch (e) {
       print('❌ [FCM] Backend gönderme hatası: $e');
+      return false;
+    }
+  }
+  
+  // 🍎 APNs token'ı backend'e gönder (iOS için)
+  static Future<bool> _sendApnsTokenToBackend(String apnsToken, int userId, String userType) async {
+    try {
+      print('📡 [APNs] Token backend\'e gönderiliyor...');
+      final response = await http.post(
+        Uri.parse('$baseUrl/update_fcm_token.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'user_type': userType,
+          'apns_token': apnsToken,
+          'device_type': 'ios',
+        }),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ [APNs] Token backend\'e kaydedildi!');
+          _fcmTokenSentToServer = true;
+          _cachedFcmToken = apnsToken;
+          
+          // Topic'lere subscribe (APNs için de gerekli olabilir)
+          await _subscribeToTopics();
+          
+          return true;
+        } else {
+          print('❌ [APNs] Backend hatası: ${data['message']}');
+        }
+      } else {
+        print('❌ [APNs] HTTP hatası: ${response.statusCode}');
+      }
+      return false;
+    } catch (e) {
+      print('❌ [APNs] Backend gönderme hatası: $e');
       return false;
     }
   }
@@ -507,6 +563,7 @@ class AdvancedNotificationService {
           'user_id': userId,
           'user_type': userType,
           'fcm_token': token,
+          'device_type': 'android',
         }),
       ).timeout(const Duration(seconds: 10));
       
