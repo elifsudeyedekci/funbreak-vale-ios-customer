@@ -170,8 +170,8 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
               await authProvider.checkAuthStatus();
             }
             
-            // 📱 FCM TOKEN KAYDET (Bildirimler için!) - ARKA PLANDA, BEKLEMEDEN!
-            _saveFCMToken(userId); // await YOK - kullanıcı beklemez!
+            // 📱 FCM TOKEN: auth_provider.dart'ta login sonrası otomatik kaydediliyor
+            // _saveFCMToken KALDIRILDI - DUPLICATE ÖNLEME!
             
             Navigator.pushAndRemoveUntil(
               context,
@@ -225,8 +225,8 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
             await authProvider.checkAuthStatus(); // Session'ı yeniden yükle
           }
           
-          // 📱 FCM TOKEN KAYDET (Bildirimler için!) - ARKA PLANDA, BEKLEMEDEN!
-          _saveFCMToken(userId); // await YOK - kullanıcı beklemez!
+          // 📱 FCM TOKEN: auth_provider.dart'ta register sonrası otomatik kaydediliyor
+          // _saveFCMToken KALDIRILDI - DUPLICATE ÖNLEME!
           
           Navigator.pushAndRemoveUntil(
             context,

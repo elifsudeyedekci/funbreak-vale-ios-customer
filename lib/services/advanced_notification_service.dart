@@ -21,8 +21,9 @@ class AdvancedNotificationService {
   static String? _cachedFcmToken;
   static StreamSubscription<RemoteMessage>? _foregroundSubscription;
   
-  // 🔥 YENİ: FCM token sadece 1 kez alınsın - COMPLETER PATTERN!
-  static Completer<bool>? _fcmCompleter; // Tek istek için kilit
+  // 🔥 GPT FIX: Hard Guard + Cooldown!
+  static bool _inProgress = false;
+  static DateTime? _lastAttemptAt;
   static bool _fcmTokenSentToServer = false;
   
   // MÜŞTERİ BİLDİRİM TÜRLERİ
@@ -151,43 +152,47 @@ class AdvancedNotificationService {
     }
   }
   
-  // 🔥 YENİ: FCM TOKEN KAYDETME - SADECE LOGIN SONRASI ÇAĞRILMALI!
-  // Bu fonksiyon auth_provider.dart'tan login başarılı olduktan sonra çağrılacak
+  // 🔥 GPT FIX: HARD GUARD + COOLDOWN - TEK ÇAĞRI GARANTİSİ!
   static Future<bool> registerFcmToken(int userId, {String userType = 'customer'}) async {
-    // 🔥 COMPLETER PATTERN: Aynı anda gelen tüm çağrılar aynı sonucu bekler!
-    if (_fcmCompleter != null) {
-      print('⏳ [FCM] Token zaten isteniyor - SONUÇ BEKLENİYOR (User: $userId)');
-      return await _fcmCompleter!.future; // Aynı sonucu bekle
+    // 1️⃣ HARD GUARD: Aynı anda ikinci girişimi kes
+    if (_inProgress) {
+      print('⛔️ [FCM] Guard: inProgress, SKIP');
+      return false;
     }
     
-    // İlk çağrı: Completer oluştur ve işlemi başlat
-    _fcmCompleter = Completer<bool>();
-    print('🔔 [FCM] registerFcmToken BAŞLADI - User: $userId, Type: $userType');
+    // 2️⃣ COOLDOWN: 2 dakika içinde tekrar deneme (rate-limit önleme)
+    final now = DateTime.now();
+    if (_lastAttemptAt != null && now.difference(_lastAttemptAt!).inSeconds < 120) {
+      print('⛔️ [FCM] Guard: cooldown (${120 - now.difference(_lastAttemptAt!).inSeconds}sn kaldı), SKIP');
+      return false;
+    }
     
-    // Zaten backend'e gönderildiyse tekrar gönderme
+    // 3️⃣ Zaten backend'e gönderildiyse tekrar gönderme
     if (_fcmTokenSentToServer && _cachedFcmToken != null) {
       print('✅ [FCM] Token zaten backend\'e gönderildi - atlanıyor');
-      _fcmCompleter!.complete(true);
-      _fcmCompleter = null;
       return true;
     }
     
-    // Önce cache'e bak (SharedPreferences)
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cachedToken = prefs.getString('fcm_token_cached');
-      if (cachedToken != null && cachedToken.isNotEmpty) {
-        print('✅ [FCM] Cache\'den token bulundu - backend\'e gönderiliyor');
-        final success = await _sendTokenToBackend(cachedToken, userId, userType);
-        _fcmCompleter!.complete(success);
-        _fcmCompleter = null;
-        return success;
-      }
-    } catch (e) {
-      print('⚠️ [FCM] Cache okuma hatası: $e');
-    }
+    // 🔐 KİLİTLE!
+    _inProgress = true;
+    _lastAttemptAt = now;
+    
+    print('🔔 [FCM] registerFcmToken BAŞLADI - User: $userId, Type: $userType');
     
     try {
+      // Önce cache'e bak (SharedPreferences)
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedToken = prefs.getString('fcm_token_cached');
+        if (cachedToken != null && cachedToken.isNotEmpty) {
+          print('✅ [FCM] Cache\'den token bulundu - backend\'e gönderiliyor');
+          final success = await _sendTokenToBackend(cachedToken, userId, userType);
+          return success;
+        }
+      } catch (e) {
+        print('⚠️ [FCM] Cache okuma hatası: $e');
+      }
+      
       // 1. Önce izin iste
       print('📱 [FCM] Bildirim izni isteniyor...');
       final settings = await _messaging!.requestPermission(
@@ -201,8 +206,6 @@ class AdvancedNotificationService {
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
           settings.authorizationStatus != AuthorizationStatus.provisional) {
         print('❌ [FCM] Bildirim izni reddedildi');
-        _fcmCompleter!.complete(false);
-        _fcmCompleter = null;
         return false;
       }
       
@@ -215,11 +218,11 @@ class AdvancedNotificationService {
         );
       }
       
-      // 3. iOS'ta APNs token bekle (max 10 saniye)
+      // 3. iOS'ta APNs token bekle (max 5 saniye - kısaltıldı)
       if (Platform.isIOS) {
         print('📱 [FCM] iOS - APNs token bekleniyor...');
         String? apnsToken;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 5; i++) {
           apnsToken = await _messaging!.getAPNSToken();
           if (apnsToken != null) {
             print('✅ [FCM] APNs token alındı (${i+1}. deneme)');
@@ -229,72 +232,38 @@ class AdvancedNotificationService {
         }
         
         if (apnsToken == null) {
-          print('⚠️ [FCM] APNs token 10 saniyede alınamadı');
-          // Devam et, FCM token deneyelim
+          print('⚠️ [FCM] APNs token 5 saniyede alınamadı - devam ediliyor');
         }
       }
       
-      // 4. 🔥 GPT FIX: APNs → Firebase senkronizasyonu için 2sn bekle!
+      // 4. APNs → Firebase senkronizasyonu için 2sn bekle
       print('⏳ [FCM] APNs → Firebase senkronizasyonu için 2sn bekleniyor...');
       await Future.delayed(const Duration(seconds: 2));
       
-      // 5. FCM Token al (5 DENEME + ARTAN BEKLEME!)
-      print('🔑 [FCM] Token alınıyor (5 deneme)...');
+      // 5. 🔥 GPT FIX: SADECE 1 DENEME! (Rate limit'i önle)
+      print('🔑 [FCM] Token alınıyor (TEK DENEME)...');
       String? token;
       
-      for (int i = 0; i < 5; i++) {
-        try {
-          print('🔑 [FCM] Deneme ${i + 1}/5...');
-          token = await _messaging!.getToken().timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              print('⏱️ [FCM] Deneme ${i + 1} timeout');
-              return null;
-            },
-          );
-          
-          if (token != null && token.isNotEmpty) {
-            print('✅ [FCM] Token ${i + 1}. denemede alındı!');
-            break;
-          }
-        } catch (tokenError) {
-          print('⚠️ [FCM] Deneme ${i + 1} başarısız: $tokenError');
-        }
+      try {
+        token = await _messaging!.getToken().timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            print('⏱️ [FCM] Token alma timeout (15sn)');
+            return null;
+          },
+        );
         
-        // Her denemede artan bekleme (2s, 4s, 6s, 8s, 10s)
-        if (i < 4) {
-          final waitSeconds = 2 * (i + 1);
-          print('⏳ [FCM] ${waitSeconds}sn bekleniyor...');
-          await Future.delayed(Duration(seconds: waitSeconds));
+        if (token != null && token.isNotEmpty) {
+          print('✅ [FCM] Token alındı!');
         }
+      } catch (tokenError) {
+        print('⚠️ [FCM] Token alma başarısız: $tokenError');
       }
       
+      // Token alınamadıysa - BİR DAHA DENEME (rate limit'i önle)
       if (token == null || token.isEmpty) {
-        print('❌ [FCM] 5 denemede de token alınamadı - NATIVE FALLBACK deneniyor...');
-        
-        // 🔥 GPT DEBUG: Native MethodChannel ile dene!
-        if (Platform.isIOS) {
-          try {
-            const nativeFcm = MethodChannel('debug_fcm');
-            final nativeToken = await nativeFcm.invokeMethod<String>('getNativeFcmToken');
-            print('🔥 [NATIVE FALLBACK] Sonuç: $nativeToken');
-            
-            if (nativeToken != null && nativeToken.isNotEmpty) {
-              token = nativeToken;
-              print('✅ [NATIVE FALLBACK] Token alındı!');
-            }
-          } catch (nativeError) {
-            print('❌ [NATIVE FALLBACK] HATA: $nativeError');
-            // Bu hata gerçek iOS hatasını gösterecek!
-          }
-        }
-        
-        if (token == null || token.isEmpty) {
-          print('❌ [FCM] Tüm yöntemler başarısız');
-          _fcmCompleter!.complete(false);
-          _fcmCompleter = null;
-          return false;
-        }
+        print('❌ [FCM] Token alınamadı - 2 dakika sonra tekrar denenecek');
+        return false;
       }
       
       print('✅ [FCM] Token alındı: ${token.substring(0, 30)}...');
@@ -311,25 +280,14 @@ class AdvancedNotificationService {
       
       // Backend'e gönder
       final success = await _sendTokenToBackend(token, userId, userType);
-      _fcmCompleter!.complete(success);
-      _fcmCompleter = null;
       return success;
       
     } catch (e) {
       print('❌ [FCM] registerFcmToken hatası: $e');
-      
-      // Rate limit hatası varsa kaydet
-      if (e.toString().contains('Too many') || e.toString().contains('server requests')) {
-        print('🛑 [FCM] RATE LIMIT! 5 dakika bekleyin.');
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('fcm_rate_limit_time', DateTime.now().toIso8601String());
-        } catch (_) {}
-      }
-      
-      _fcmCompleter?.complete(false);
-      _fcmCompleter = null;
       return false;
+    } finally {
+      // 🔓 KİLİDİ AÇ!
+      _inProgress = false;
     }
   }
   
@@ -377,7 +335,8 @@ class AdvancedNotificationService {
   // 🔥 Token durumunu sıfırla (logout için)
   static void resetTokenState() {
     _cachedFcmToken = null;
-    _fcmCompleter = null;
+    _inProgress = false;
+    _lastAttemptAt = null;
     _fcmTokenSentToServer = false;
     print('🔄 [FCM] Token durumu sıfırlandı');
   }
