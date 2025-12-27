@@ -26,6 +26,11 @@ class AdvancedNotificationService {
   static DateTime? _lastAttemptAt;
   static bool _fcmTokenSentToServer = false;
   
+  // 🔄 OTOMATİK RETRY: Başarısız olunca 2dk sonra tekrar dene
+  static Timer? _retryTimer;
+  static int? _pendingUserId;
+  static String? _pendingUserType;
+  
   // MÜŞTERİ BİLDİRİM TÜRLERİ
   static const Map<String, NotificationConfig> _customerNotifications = {
     'driver_found': NotificationConfig(
@@ -260,9 +265,10 @@ class AdvancedNotificationService {
         print('⚠️ [FCM] Token alma başarısız: $tokenError');
       }
       
-      // Token alınamadıysa - BİR DAHA DENEME (rate limit'i önle)
+      // Token alınamadıysa - 2 DAKİKA SONRA OTOMATİK TEKRAR DENE!
       if (token == null || token.isEmpty) {
-        print('❌ [FCM] Token alınamadı - 2 dakika sonra tekrar denenecek');
+        print('❌ [FCM] Token alınamadı - 2 dakika sonra OTOMATİK tekrar denenecek');
+        _scheduleRetry(userId, userType);
         return false;
       }
       
@@ -338,7 +344,43 @@ class AdvancedNotificationService {
     _inProgress = false;
     _lastAttemptAt = null;
     _fcmTokenSentToServer = false;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _pendingUserId = null;
+    _pendingUserType = null;
     print('🔄 [FCM] Token durumu sıfırlandı');
+  }
+  
+  // 🔄 OTOMATİK RETRY: 2 dakika sonra tekrar dene
+  static void _scheduleRetry(int userId, String userType) {
+    // Önceki timer'ı iptal et
+    _retryTimer?.cancel();
+    
+    // Bilgileri sakla
+    _pendingUserId = userId;
+    _pendingUserType = userType;
+    
+    // 2 dakika sonra tekrar dene
+    print('⏰ [FCM] 2 dakika sonra otomatik retry planlandı...');
+    _retryTimer = Timer(const Duration(minutes: 2), () async {
+      print('🔄 [FCM] OTOMATİK RETRY başlıyor...');
+      
+      // Cooldown'ı sıfırla (retry için)
+      _lastAttemptAt = null;
+      
+      // Tekrar dene
+      if (_pendingUserId != null && _pendingUserType != null) {
+        final success = await registerFcmToken(_pendingUserId!, userType: _pendingUserType!);
+        if (success) {
+          print('✅ [FCM] OTOMATİK RETRY başarılı!');
+          _pendingUserId = null;
+          _pendingUserType = null;
+        } else {
+          print('❌ [FCM] OTOMATİK RETRY başarısız - tekrar planlanıyor...');
+          // Başarısız olursa tekrar 2dk sonra dene (registerFcmToken zaten _scheduleRetry çağırır)
+        }
+      }
+    });
   }
   
   // ANDROID BİLDİRİM KANALLARI
