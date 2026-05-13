@@ -2193,9 +2193,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if (provisionSuccess) {
                 print('✅ Vale kabul etti + Provizyon çekildi - süreç tamamlandı!');
                 
+                // 🔥 SİYAH EKRAN FIX: Önce timer'ları durdur, sonra delay ile navigation yap
+                _realTimeSearchTimer?.cancel();
+                _realTimeSearchTimer = null;
+                
+                // Modal'ı kapat
                 if (modalContext.mounted) {
                   Navigator.of(modalContext).pop();
                 }
+                
+                // 🔥 DELAY EKLE - Modal kapandıktan sonra navigation yap (siyah ekran fix)
+                await Future.delayed(const Duration(milliseconds: 300));
                 
                 if (mounted) {
                   // GERÇEK VERİLER İLE YOLCULUK EKRANINA GİT!
