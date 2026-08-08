@@ -9,6 +9,7 @@ import '../../providers/admin_api_provider.dart';
 import '../../providers/ride_provider.dart'; // 🔥 RideProvider temizliği için!
 import '../../services/customer_cards_api.dart'; // Kart yönetimi için
 import '../payment/card_payment_screen.dart'; // 💳 VakıfBank 3D Secure ödeme
+import '../../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 
 // MÜŞTERİ ÖDEME VE PUANLAMA EKRANI!
 class RidePaymentScreen extends StatefulWidget {
@@ -46,7 +47,7 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
   int _waitingIntervalMinutes = 15; // 15 dakikalık aralıklar
   
   // ÖDEME YÖNTEMİ VE İNDİRİM KODU - ÖDEME EKRANINA EKLENDİ!
-  String _selectedPaymentMethod = ''; // Başlangıçta boş - kullanıcı seçecek
+  String _selectedPaymentMethod = kCardPaymentEnabled ? '' : kDefaultPaymentMethod; // Kart kapalıyken doğrudan havale seçili
   String? _selectedCardId; // Seçilen kayıtlı kart ID'si
   List<Map<String, dynamic>> _savedCards = []; // Kayıtlı kartlar
   final TextEditingController _discountCodeController = TextEditingController();
@@ -1627,30 +1628,31 @@ class _RidePaymentScreenState extends State<RidePaymentScreen> with SingleTicker
             
             const SizedBox(height: 20),
             
-            // Kredi Kartı
-            ListTile(
-              leading: const Icon(Icons.credit_card, color: Colors.blue),
-              title: const Text('Kredi/Banka Kartı', style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Kayıtlı kartlarınız', style: TextStyle(color: Colors.black87)),
-              trailing: _selectedPaymentMethod == 'card' 
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : null,
-              onTap: () {
-                Navigator.of(modalContext).pop();
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    Future.delayed(const Duration(milliseconds: 200), () {
-                      if (mounted) {
-                        _showCardSelectionModal();
-                      }
-                    });
-                  }
-                });
-              },
-            ),
-            
-            const Divider(height: 1),
-            
+            // Kredi Kartı - GEÇİCİ OLARAK KAPALI, sadece Havale/EFT sunuluyor
+            if (kCardPaymentEnabled) ...[
+              ListTile(
+                leading: const Icon(Icons.credit_card, color: Colors.blue),
+                title: const Text('Kredi/Banka Kartı', style: TextStyle(color: Colors.black)),
+                subtitle: const Text('Kayıtlı kartlarınız', style: TextStyle(color: Colors.black87)),
+                trailing: _selectedPaymentMethod == 'card'
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : null,
+                onTap: () {
+                  Navigator.of(modalContext).pop();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        if (mounted) {
+                          _showCardSelectionModal();
+                        }
+                      });
+                    }
+                  });
+                },
+              ),
+              const Divider(height: 1),
+            ],
+
             // Havale/EFT
             ListTile(
               leading: const Icon(Icons.account_balance, color: Colors.orange),

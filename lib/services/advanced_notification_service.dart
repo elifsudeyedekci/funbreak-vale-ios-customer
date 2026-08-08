@@ -87,6 +87,12 @@ class AdvancedNotificationService {
       priority: 'normal',
       sound: 'default',
     ),
+    'new_message': NotificationConfig(
+      title: '💬 Yeni Mesaj',
+      channelId: 'funbreak_messages',
+      priority: 'high',
+      sound: 'notification.wav',
+    ),
   };
   
   // 🔥 SERVİS BAŞLATMA - FCM TOKEN ALMADAN!
@@ -507,8 +513,20 @@ class AdvancedNotificationService {
       ),
       AndroidNotificationChannel(
         'payment_updates_v2',
-        'Ödeme Bildirimleri', 
+        'Ödeme Bildirimleri',
         description: 'Ödeme ve fatura bilgileri',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('notification'),
+        enableVibration: true,
+        enableLights: true,
+        ledColor: Color(0xFFFFD700),
+        showBadge: true,
+      ),
+      AndroidNotificationChannel(
+        'funbreak_messages_v2',
+        'Mesaj Bildirimleri',
+        description: 'Şoförden gelen sohbet mesajı bildirimleri',
         importance: Importance.max,
         playSound: true,
         sound: RawResourceAndroidNotificationSound('notification'),

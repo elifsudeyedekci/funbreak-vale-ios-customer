@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 
 class RideService {
   static const String baseUrl = 'https://admin.funbreakvale.com/api';
@@ -58,7 +59,7 @@ class RideService {
           'waypoints': waypoints ?? [], // 🔥 ARA DURAKLAR
           'scheduled_time': formattedScheduledTime, // ✅ Backend uyumlu format!
           'estimated_price': estimatedPrice ?? 0.0,
-          'payment_method': 'card',
+          'payment_method': kDefaultPaymentMethod,
           'request_type': requestType,
           'ride_type': serviceType,
           'selected_driver_id': selectedDriverId,

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'admin_api_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 
 class RideProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -72,7 +73,7 @@ class RideProvider with ChangeNotifier {
           ),
           pickupAddress: data['pickup_address'] ?? '',
           destinationAddress: data['destination_address'] ?? '',
-          paymentMethod: data['payment_method'] ?? 'card', // EKSİK ALAN!
+          paymentMethod: data['payment_method'] ?? kDefaultPaymentMethod, // EKSİK ALAN!
           estimatedPrice: data['estimated_price']?.toDouble() ?? 0.0,
           estimatedTime: data['estimated_time']?.toInt() ?? 30, // EKSİK ALAN!
           status: data['status'] ?? 'pending',
@@ -139,7 +140,7 @@ class RideProvider with ChangeNotifier {
         ),
         pickupAddress: rideDetails['pickup_address'] ?? '',
         destinationAddress: rideDetails['destination_address'] ?? '',
-        paymentMethod: rideDetails['payment_method'] ?? 'card', // EKSİK ALAN!
+        paymentMethod: rideDetails['payment_method'] ?? kDefaultPaymentMethod, // EKSİK ALAN!
         estimatedPrice: rideDetails['estimated_price']?.toDouble() ?? 0.0,
         estimatedTime: rideDetails['estimated_time']?.toInt() ?? 30, // EKSİK ALAN!
         status: rideDetails['status'] ?? 'accepted',

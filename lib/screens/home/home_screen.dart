@@ -41,6 +41,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main_screen.dart';
+import '../../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   
   // 2 AŞAMALI SİSTEM DEĞİŞKENLERİ
   bool _termsAccepted = true; // VARSAYILAN OLARAK KABUL EDİLMİŞ - UX İYİLEŞTİRMESİ!
-  String _selectedPaymentMethod = 'card';
+  String _selectedPaymentMethod = kDefaultPaymentMethod;
   
   // AKILLI SİSTEM DEĞİŞKENLERİ - HAFIZADAN RESTORE [[memory:9695382]]
   int? _currentRideId;
@@ -4701,7 +4702,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'destination_lng': _destinationLocation?.longitude ?? 0.0,
         'scheduled_time': _selectedDateTime?.toIso8601String() ?? DateTime.now().add(const Duration(hours: 2)).toIso8601String(),
         'estimated_price': (_estimatedPrice ?? 0.0) - _discountAmount,
-        'payment_method': 'card',
+        'payment_method': kDefaultPaymentMethod,
         'request_type': 'scheduled_later', // 2+ SAAT İLERİ!
         'ride_type': _selectedServiceType,
         'notes': '2+ saat ileri rezervasyon - otomatik sistem'
@@ -7506,7 +7507,7 @@ Kabul etmekle bu şartları onaylamış bulunmaktasınız.
                 'destination_lng': _destinationLocation?.longitude ?? 0.0,
                 'pickup_address': _pickupAddress,
                 'destination_address': _destinationAddress,
-                'payment_method': 'card',
+                'payment_method': kDefaultPaymentMethod,
                 'estimated_price': ride['estimated_price'] ?? 0.0,
                 'estimated_time': 30,
                 'status': 'accepted',

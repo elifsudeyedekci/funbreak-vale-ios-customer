@@ -8,6 +8,7 @@ import '../addresses/saved_addresses_screen.dart';
 import '../billing/billing_screen.dart';
 import '../payment/payment_methods_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 // import '../security/security_center_screen.dart'; // KALDIRILDI - Şifre girişi yok
 import '../../providers/language_provider.dart';
 import 'price_list_screen.dart';
@@ -219,19 +220,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
-            _buildSettingTile(
-              icon: Icons.credit_card,
-              title: 'Ödeme Yöntemleri',
-              subtitle: 'Kredi kartları ve ödeme seçenekleri',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PaymentMethodsScreen(),
-                  ),
-                );
-              },
-            ),
+            // Kredi kartı ödemesi kapalıyken kart yönetimi ekranına giriş de gizli
+            if (kCardPaymentEnabled)
+              _buildSettingTile(
+                icon: Icons.credit_card,
+                title: 'Ödeme Yöntemleri',
+                subtitle: 'Kredi kartları ve ödeme seçenekleri',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentMethodsScreen(),
+                    ),
+                  );
+                },
+              ),
             _buildSettingTile(
               icon: Icons.currency_lira,
               title: 'Fiyat Listesi',
@@ -584,7 +587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildHelpItem(
               'Ödeme yöntemleri nelerdir?',
-              '• Kredi/Banka Kartı: Yolculuk sonunda ödeme yapılır\n• Havale/EFT: Banka hesabımıza havale yapabilirsiniz. Havale yapıldıktan sonra sistem tarafından otomatik onaylanır',
+              '• Havale/EFT: Banka hesabımıza havale yapabilirsiniz. Havale yapıldıktan sonra sistem tarafından otomatik onaylanır',
               Icons.payment,
             ),
             _buildHelpItem(

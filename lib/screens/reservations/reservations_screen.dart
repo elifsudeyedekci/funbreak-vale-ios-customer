@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../models/ride.dart';
 import '../ride/ride_payment_screen.dart';
+import '../../config/payment_config.dart'; // 🔧 Kart ödemesi aç/kapa flag'i
 
 class ReservationsScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -161,7 +162,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     ),
                     pickupAddress: firstActiveRide['pickup_address'] ?? '',
                     destinationAddress: firstActiveRide['destination_address'] ?? '',
-                    paymentMethod: 'card',
+                    paymentMethod: kDefaultPaymentMethod,
                     estimatedPrice: firstActiveRide['estimated_price']?.toDouble() ?? 0.0,
                     estimatedTime: 30,
                     status: firstActiveRide['status'] ?? 'pending',
