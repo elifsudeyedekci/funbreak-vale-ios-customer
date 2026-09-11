@@ -149,7 +149,16 @@ class AdvancedNotificationService {
       
       // App açılışında notification handler
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
-      
+
+      // Uygulama tamamen kapalıyken bildirime tıklanıp açıldıysa
+      // (onMessageOpenedApp bu durumda TETİKLENMEZ, ayrıca kontrol etmek gerekir)
+      _messaging!.getInitialMessage().then((message) {
+        if (message != null) {
+          print('🔔 Uygulama bildirimle (kapalıyken) açıldı: ${message.messageId}');
+          _reportNotificationOpenedFromData(message.data);
+        }
+      });
+
       // Token güncelleme listener (sadece dinle, istek yapma)
       FirebaseMessaging.instance.onTokenRefresh.listen(_onTokenRefresh);
       
@@ -623,11 +632,39 @@ class AdvancedNotificationService {
   static void _onMessageOpenedApp(RemoteMessage message) {
     print('📱 [MÜŞTERİ] Notification tap: ${message.data}');
     // Navigation işlemleri burada yapılabilir
+    _reportNotificationOpenedFromData(message.data);
   }
-  
+
   // NOTIFICATION TAP HANDLER
   static void _onNotificationTapped(NotificationResponse response) {
     print('🔔 [MÜŞTERİ] Local notification tapped: ${response.payload}');
+    if (response.payload != null) {
+      try {
+        final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+        _reportNotificationOpenedFromData(data);
+      } catch (e) {
+        print('⚠️ Notification payload parse hatası: $e');
+      }
+    }
+  }
+
+  // ADMİN PANELE "BİLDİRİM AÇILDI" BİLGİSİNİ GÖNDER
+  static void _reportNotificationOpenedFromData(Map<String, dynamic> data) {
+    final notificationId = data['notification_id'];
+    if (notificationId == null) return;
+
+    unawaited(() async {
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/mark_notification_opened.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'notification_id': notificationId.toString()}),
+        ).timeout(const Duration(seconds: 10));
+        print('📊 Bildirim açılma bilgisi gönderildi: $notificationId');
+      } catch (e) {
+        print('⚠️ Bildirim açılma bilgisi gönderilemedi: $e');
+      }
+    }());
   }
   
   // ANDROID LOCAL NOTIFICATION GÖSTER
